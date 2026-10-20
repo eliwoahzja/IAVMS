@@ -1,13 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, CalendarCheck2, ShieldCheck } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { signIn, signUp } from '@/app/actions'
 import { PasswordField, Submit } from '@/components/auth-bits'
 
 export type AuthMode = 'signin' | 'signup'
 
 const URL_FOR: Record<AuthMode, string> = { signin: '/login', signup: '/signup' }
+
+function Showcase() {
+  return (
+    <div className="auth-showcase" aria-hidden="true">
+      <div className="auth-showcase-row">
+        <span className="avatar avatar-sage">SB</span>
+        <div><strong>Santos, Bea</strong><span>Registrar · APT-1043</span></div>
+      </div>
+      <div className="auth-showcase-meta">
+        <span>Oct 23 · 1:00 PM</span>
+        <span className="status-pill status-approved"><span />Approved</span>
+      </div>
+    </div>
+  )
+}
 
 export function AuthSlider({ initialMode, error, msg }: {
   initialMode: AuthMode
@@ -94,23 +109,26 @@ export function AuthSlider({ initialMode, error, msg }: {
       </section>
 
       <div className="auth-overlay">
+        <div className="auth-overlay-art" aria-hidden="true">
+          <span className="auth-art-grid" />
+          <span className="auth-art-glow" />
+          <span className="auth-art-seal" />
+        </div>
         <div className="auth-overlay-track">
           <div className="auth-overlay-panel auth-overlay-new" inert={up}>
             <p className="auth-overlay-kicker">New here</p>
-            <h2>Create your appointment account</h2>
-            <p>Pick an office, pick a slot, state the purpose. The office approves it.</p>
-            <ul className="auth-points">
-              <li><CalendarCheck2 /> Offices set the slots they take, Monday to Friday.</li>
-              <li><ShieldCheck /> Visitor records log arrivals and departures.</li>
-            </ul>
+            <h2>Book the office, skip the queue</h2>
+            <p>Pick an office, pick a slot, say what it is for. The office approves it.</p>
+            <Showcase />
             <button type="button" className="auth-ghost" onClick={() => go('signup')}>
               Create an account <ArrowRight />
             </button>
           </div>
           <div className="auth-overlay-panel auth-overlay-back" inert={!up}>
             <p className="auth-overlay-kicker">Already registered</p>
-            <h2>Sign in and pick up where you left</h2>
+            <h2>Sign in and pick up where you left off</h2>
             <p>Your requests, approvals and visitor logs are waiting for you.</p>
+            <Showcase />
             <button type="button" className="auth-ghost" onClick={() => go('signin')}>
               Sign in <ArrowRight />
             </button>
