@@ -56,8 +56,8 @@ export function AuthSlider({ initialMode, error, msg }: {
           {!up && notice.error && <p className="auth-note auth-error" role="alert">{notice.error}</p>}
           {!up && notice.msg && <p className="auth-note" role="status">{notice.msg}</p>}
           <form action={signIn}>
-            <label className="modal-label" htmlFor="signin-email">Email</label>
-            <input id="signin-email" name="email" type="email" required autoComplete="email" className="modal-input" />
+            <label className="field-label" htmlFor="signin-email">Email</label>
+            <input id="signin-email" name="email" type="email" required autoComplete="email" className="field-input" />
             <PasswordField id="signin-password" autoComplete="current-password" />
             <Submit label="Sign in" pendingLabel="Signing in..." />
           </form>
@@ -71,39 +71,50 @@ export function AuthSlider({ initialMode, error, msg }: {
           {up && notice.error && <p className="auth-note auth-error" role="alert">{notice.error}</p>}
           {up && notice.msg && <p className="auth-note" role="status">{notice.msg}</p>}
           <form action={signUp}>
-            <div className="auth-names">
-              <div>
-                <label className="modal-label" htmlFor="signup-last">Last name</label>
-                <input id="signup-last" name="last_name" required autoComplete="family-name" className="modal-input" />
+            <fieldset className="field-set">
+              <legend className="field-legend">Your details</legend>
+              <div className="field-pair">
+                <div>
+                  <label className="field-label" htmlFor="signup-last">Last name</label>
+                  <input id="signup-last" name="last_name" required autoComplete="family-name" className="field-input" />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="signup-first">First name</label>
+                  <input id="signup-first" name="first_name" required autoComplete="given-name" className="field-input" />
+                </div>
               </div>
-              <div>
-                <label className="modal-label" htmlFor="signup-first">First name</label>
-                <input id="signup-first" name="first_name" required autoComplete="given-name" className="modal-input" />
+              <label className="field-label" htmlFor="signup-middle">Middle name</label>
+              <input id="signup-middle" name="middle_name" autoComplete="additional-name" placeholder="Optional" className="field-input" />
+              <div className="field-pair">
+                <div>
+                  <label className="field-label" htmlFor="signup-type">Signing up as</label>
+                  <select id="signup-type" name="type" className="field-input" required>
+                    <option value="student">Student</option>
+                    <option value="faculty">Faculty member</option>
+                    <option value="visitor">External visitor</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="signup-gender">Gender</label>
+                  <select id="signup-gender" name="gender" className="field-input" required defaultValue="">
+                    <option value="" disabled>Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            <div className="auth-names">
-              <div>
-                <label className="modal-label" htmlFor="signup-middle">Middle name</label>
-                <input id="signup-middle" name="middle_name" autoComplete="additional-name" placeholder="Optional" className="modal-input" />
-              </div>
-              <div>
-                <label className="modal-label" htmlFor="signup-type">I am a</label>
-                <select id="signup-type" name="type" className="modal-input">
-                  <option value="student">Student</option>
-                  <option value="faculty">Faculty member</option>
-                  <option value="visitor">External visitor</option>
-                </select>
-              </div>
-            </div>
-            <label className="modal-label" htmlFor="signup-email">Email</label>
-            <input id="signup-email" name="email" type="email" required autoComplete="email" className="modal-input" />
-            <PasswordField id="signup-password" autoComplete="new-password" minLength={8} />
-            <p className="auth-hint">At least 8 characters.</p>
-            <label className="auth-consent">
-              <input type="checkbox" name="consent" required />
-              <span>I agree that SPCC collects my name, email and appointment details to schedule visits (Data Privacy Act of 2012, RA 10173).</span>
-            </label>
-            <Submit label="Create account" pendingLabel="Creating account..." />
+            </fieldset>
+            <fieldset className="field-set">
+              <legend className="field-legend">Account access</legend>
+              <label className="field-label" htmlFor="signup-email">Email</label>
+              <input id="signup-email" name="email" type="email" required autoComplete="email" className="field-input" />
+              <PasswordField id="signup-password" autoComplete="new-password" minLength={8} />
+              <label className="auth-consent">
+                <input type="checkbox" name="consent" required />
+                <span>I agree that SPCC collects my name, email and appointment details to schedule visits (Data Privacy Act of 2012, RA 10173).</span>
+              </label>
+              <Submit label="Create account" pendingLabel="Creating account..." />
+            </fieldset>
           </form>
         </div>
       </section>

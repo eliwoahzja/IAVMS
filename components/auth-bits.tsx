@@ -20,8 +20,8 @@ export function Submit({ label, pendingLabel }: { label: string; pendingLabel: s
 export function PasswordField({ id, autoComplete, minLength }: { id: string; autoComplete: string; minLength?: number }) {
   const [show, setShow] = useState(false)
   return <div className="field-row">
-    <label className="modal-label" htmlFor={id}>Password</label>
-    <input id={id} name="password" type={show ? 'text' : 'password'} required minLength={minLength} autoComplete={autoComplete} className="modal-input" />
+    <label className="field-label" htmlFor={id}>Password{minLength ? <span className="field-label-note">{minLength} characters minimum</span> : null}</label>
+    <input id={id} name="password" type={show ? 'text' : 'password'} required minLength={minLength} autoComplete={autoComplete} className="field-input" />
     <button type="button" className="password-toggle" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>{show ? <EyeOff /> : <Eye />}</button>
   </div>
 }

@@ -1,6 +1,7 @@
 export type Role = 'student' | 'faculty' | 'visitor' | 'approver' | 'admin'
+export type Gender = 'male' | 'female'
 export type Status = 'Pending' | 'Approved' | 'Rescheduled' | 'Rejected' | 'Cancelled'
-export type Profile = { id: string; full_name: string; email: string; role: Role; department: string | null; authorized: boolean }
+export type Profile = { id: string; full_name: string; email: string; role: Role; department: string | null; authorized: boolean; gender?: Gender | null }
 export type Appt = { id: number; requester_id: string; requester_name: string; requester_email: string; requester_type: string; department: string; date: string; time: string; purpose: string; status: Status }
 export type Visitor = { id: number; name: string; purpose: string; department: string; appointment_id: number | null; arrived_at: string | null; left_at: string | null; created_at: string }
 export type Avail = { department: string; weekday: number; time: string }

@@ -6,6 +6,8 @@ Next.js + Supabase (accounts, database, access rules) + Resend (email).
 2. Copy `.env.example` to `.env.local`, or add the same variables in Vercel.
 3. Create an account in the app, then run the `update ... set role = 'admin'` line at the bottom of schema.sql.
 
+An existing database that predates `supabase/migrations/` needs each file in that folder run once, in order. They are written to be repeatable.
+
 ## Booking rules
 - A pending request does not block a slot. Only approved or rescheduled bookings do, and the database enforces that.
 - Requesters can cancel pending, approved or rescheduled appointments.

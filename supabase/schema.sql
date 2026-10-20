@@ -3,6 +3,7 @@ create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
   email text not null,
+  gender text check (gender in ('male','female')),
   role text not null default 'student' check (role in ('student','faculty','visitor','approver','admin')),
   department text,
   authorized boolean not null default true,
@@ -45,8 +46,9 @@ create table public.email_log (
 
 create function public.handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, full_name, email, role, authorized)
+  insert into public.profiles (id, full_name, email, gender, role, authorized)
   values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''), new.email,
+    case when new.raw_user_meta_data->>'gender' in ('male','female') then new.raw_user_meta_data->>'gender' end,
     case when new.raw_user_meta_data->>'type' in ('student','faculty','visitor') then new.raw_user_meta_data->>'type' else 'student' end,
     coalesce(new.raw_user_meta_data->>'type', '') <> 'visitor');
   return new;

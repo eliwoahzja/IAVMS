@@ -2,11 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { ROLES, SLOTS } from '@/lib/constants'
+import { GENDERS, ROLES, SLOTS, isRequester } from '@/lib/constants'
 import { notify, notifyOffice } from '@/lib/email'
 import { admin } from '@/lib/supabase/admin'
 import { supabase } from '@/lib/supabase/server'
-import type { Profile, R, Role, SlotInfo } from '@/lib/types'
+import type { Gender, Profile, R, Role, SlotInfo } from '@/lib/types'
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
@@ -198,6 +198,9 @@ export async function signIn(fd: FormData) {
 export async function signUp(fd: FormData) {
   if (fd.get('consent') !== 'on') back('/signup', 'error', 'Tick the box to accept the privacy notice.')
   const type = String(fd.get('type'))
+  const gender = String(fd.get('gender'))
+  if (!isRequester(type as Role)) back('/signup', 'error', 'Choose what describes you.')
+  if (!GENDERS.includes(gender as Gender)) back('/signup', 'error', 'Choose a gender.')
   const last = String(fd.get('last_name')).trim()
   const first = String(fd.get('first_name')).trim()
   const middle = String(fd.get('middle_name') ?? '').trim().replace(/\.$/, '')
@@ -207,7 +210,7 @@ export async function signUp(fd: FormData) {
   const { data, error } = await sb.auth.signUp({
     email: String(fd.get('email')),
     password: String(fd.get('password')),
-    options: { data: { full_name, type } },
+    options: { data: { full_name, type, gender } },
   })
   if (error) back('/signup', 'error', /already (been )?registered/i.test(error.message) ? 'That email already has an account. Sign in instead.' : error.message)
   if (!data.session) back('/login', 'msg', 'Check your email to confirm the account, then sign in.')

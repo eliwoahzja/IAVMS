@@ -3,8 +3,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { CalendarDays, Check, ClipboardCheck, Clock3, FileText, Grid2X2, LayoutDashboard, LogOut, Menu, Plus, Search, Settings, UsersRound, X } from 'lucide-react'
 import { book, cancel, decide, markVisit, registerVisitor, saveOffice, setAuthorized, setUserRole, signOut, slotStates, toggleSlot } from '@/app/actions'
+import { DatePicker } from '@/components/date-picker'
 import { SkeletonRows, SkeletonTableRows } from '@/components/skeleton'
-import { ROLES, SLOTS, STATUSES, TYPE_LABEL, WEEKDAYS, code, day, initials, personLabel, tone } from '@/lib/constants'
+import { GENDER_LABEL, ROLES, SLOTS, STATUSES, TYPE_LABEL, WEEKDAYS, code, day, initials, personLabel, tone } from '@/lib/constants'
 import { project, rubberband, springTo } from '@/lib/spring'
 import type { Appt, Avail, Dept, MailRow, Profile, R, Role, SlotInfo, Status, Visitor } from '@/lib/types'
 
@@ -125,7 +126,7 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
             <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(upcoming.length, 2)} label="Refreshing appointments" /> : upcoming.length ? upcoming.map((a, i) => <ApptRow key={a.id} a={a} i={i} />) : <p className="empty-copy">Nothing scheduled.</p>}</div></div></>}
 
         {tab === 'Appointments' && <div className="panel"><div className="panel-heading"><div><h2>{list.length} {list.length === 1 ? 'request' : 'requests'}</h2></div>
-          <div className="filters"><label className="modal-label" htmlFor="f-status">Status</label><select id="f-status" className="modal-input" value={filter} onChange={(e) => setFilter(e.target.value as Status | 'All')}><option>All</option>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div></div>
+          <div className="filters"><label className="field-label" htmlFor="f-status">Status</label><select id="f-status" className="field-input" value={filter} onChange={(e) => setFilter(e.target.value as Status | 'All')}><option>All</option>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div></div>
           <div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(list.length, 2), 5)} label="Refreshing requests" /> : list.length ? list.map((a, i) => <ApptRow key={a.id} a={a} i={i} actions={<>
             {staff && (group === 'admin' || a.department === profile.department) && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <button className="secondary-button" onClick={() => setModal({ review: a })}>{a.status === 'Pending' ? 'Review' : 'Reschedule'}</button>}
             {(a.requester_id === profile.id || group === 'admin') && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <ConfirmButton label="Cancel" confirmLabel="Confirm cancel" disabled={busy} onConfirm={() => run(() => cancel(a.id), 'Appointment cancelled')} />}</>} />) : <p className="empty-copy">No requests match.</p>}</div></div>}
@@ -145,7 +146,7 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
       </div>
     </main>
 
-    {typeof modal === 'object' && modal && <ModalBox title={`Review ${code(modal.review.id)}`} onClose={() => setModal(null)}><Review a={modal.review} run={run} busy={busy} /></ModalBox>}
+    {typeof modal === 'object' && modal && <ModalBox title={`Review ${code(modal.review.id)}`} onClose={() => setModal(null)}><Review a={modal.review} today={today} run={run} busy={busy} /></ModalBox>}
     {modal === 'book' && <ModalBox title="New appointment" onClose={() => setModal(null)}><Wizard today={today} depts={depts} own={profile.role === 'approver' ? profile.department : null} run={run} busy={busy} /></ModalBox>}
     {modal === 'visitor' && <ModalBox title="Register a visitor" onClose={() => setModal(null)}><VisitorForm profile={profile} depts={depts} appts={appts} run={run} busy={busy} /></ModalBox>}
     {toast && <div className={`toast ${toastError ? 'toast-error' : ''}`} role={toastError ? 'alert' : 'status'}>{toastError ? <X /> : <Check />} {toast}</div>}
@@ -267,20 +268,20 @@ function Wizard({ today, depts, own, run, busy }: { today: string; depts: string
   return <div className="wizard">
     <div className="wizard-steps">{['Office', 'Time slot', 'Purpose'].map((s, i) => <span key={s} className={step >= i + 1 ? 'active' : ''}>{i + 1} {s}</span>)}</div>
     {step === 1 && <div className="choice-grid">{depts.filter((d) => d !== own).map((d) => <button type="button" key={d} className={`choice-card ${department === d ? 'selected' : ''}`} onClick={() => setDepartment(d)}>{d}</button>)}</div>}
-    {step === 2 && <><label className="modal-label" htmlFor="appt-date">Date</label><input id="appt-date" type="date" min={today} className="modal-input" value={date} onChange={(e) => { setDate(e.target.value); setTime('') }} />{date && <><SlotPicker department={department} date={date} value={time} onPick={setTime} /><p className="muted-note">Only approved or rescheduled bookings block a slot. Pending requests do not.</p></>}</>}
-    {step === 3 && <><label className="modal-label" htmlFor="appt-purpose">What is the appointment for?</label><textarea id="appt-purpose" className="modal-input" rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} /></>}
-    <div className="modal-actions">{step > 1 && <button className="secondary-button" onClick={() => setStep(step - 1)}>Back</button>}
+    {step === 2 && <><DatePicker id="appt-date" label="Date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} />{date ? <><SlotPicker department={department} date={date} value={time} onPick={setTime} /><p className="muted-note">Only approved or rescheduled bookings block a slot. Pending requests do not.</p></> : <p className="muted-note">Office hours run Monday to Friday, 9:00 AM to 3:00 PM.</p>}</>}
+    {step === 3 && <><label className="field-label" htmlFor="appt-purpose">What is the appointment for?</label><textarea id="appt-purpose" className="field-input" rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} /></>}
+    <div className="form-actions">{step > 1 && <button className="secondary-button" onClick={() => setStep(step - 1)}>Back</button>}
       {step < 3 ? <button className="primary-button" disabled={!ok} onClick={() => setStep(step + 1)}>Continue</button> : <button className="primary-button" disabled={!ok || busy} onClick={() => run(() => book({ department, date, time, purpose }), 'Request submitted')}>Submit request</button>}</div></div>
 }
 
-function Review({ a, run, busy }: { a: Appt; run: Run; busy: boolean }) {
+function Review({ a, today, run, busy }: { a: Appt; today: string; run: Run; busy: boolean }) {
   const [resched, setResched] = useState(a.status !== 'Pending')
   const [date, setDate] = useState(a.date)
   const [time, setTime] = useState('')
   return <>
     <div className="review-summary"><span className={`avatar avatar-${tone(a.id)}`}>{initials(a.requester_name)}</span><div><strong>{a.requester_name}</strong><span>{a.department} · {day(a.date)} at {a.time}</span><span>{a.purpose}</span></div></div>
-    {resched && <><label className="modal-label" htmlFor="new-date">New date</label><input id="new-date" type="date" className="modal-input" value={date} onChange={(e) => { setDate(e.target.value); setTime('') }} /><SlotPicker department={a.department} date={date} value={time} onPick={setTime} /></>}
-    <div className="modal-actions">{a.status === 'Pending' && !resched && <ConfirmButton label="Reject" confirmLabel="Confirm reject" disabled={busy} onConfirm={() => run(() => decide(a.id, 'reject'), 'Request rejected')} />}
+    {resched && <><DatePicker id="new-date" label="New date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} /><SlotPicker department={a.department} date={date} value={time} onPick={setTime} /></>}
+    <div className="form-actions">{a.status === 'Pending' && !resched && <ConfirmButton label="Reject" confirmLabel="Confirm reject" disabled={busy} onConfirm={() => run(() => decide(a.id, 'reject'), 'Request rejected')} />}
       {resched ? <button className="primary-button" disabled={!time || busy} onClick={() => run(() => decide(a.id, 'reschedule', { date, time }), 'Request rescheduled')}>Confirm new time</button>
         : <><button className="secondary-button" onClick={() => setResched(true)}>Reschedule</button>{a.status === 'Pending' && <button className="primary-button" disabled={busy} onClick={() => run(() => decide(a.id, 'approve'), 'Request approved')}><Check /> Approve</button>}</>}</div></>
 }
@@ -292,18 +293,18 @@ function VisitorForm({ profile, depts, appts, run, busy }: { profile: Profile; d
   const [apptId, setApptId] = useState('')
   const linkable = appts.filter((x) => x.department === department && x.requester_type === 'visitor' && (x.status === 'Approved' || x.status === 'Rescheduled'))
   return <>
-    <label className="modal-label" htmlFor="v-name">Visitor name</label><input id="v-name" className="modal-input" value={name} onChange={(e) => setName(e.target.value)} />
-    <label className="modal-label" htmlFor="v-purpose">Purpose</label><input id="v-purpose" className="modal-input" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
-    <label className="modal-label" htmlFor="v-dept">Destination office</label><select id="v-dept" className="modal-input" value={department} disabled={profile.role === 'approver'} onChange={(e) => { setDepartment(e.target.value); setApptId('') }}>{depts.map((d) => <option key={d}>{d}</option>)}</select>
-    <label className="modal-label" htmlFor="v-appt">Appointment reference (optional)</label><select id="v-appt" className="modal-input" value={apptId} onChange={(e) => setApptId(e.target.value)}><option value="">None</option>{linkable.map((x) => <option key={x.id} value={x.id}>{code(x.id)} · {x.requester_name}</option>)}</select>
-    <div className="modal-actions"><button className="primary-button" disabled={!name.trim() || !purpose.trim() || busy} onClick={() => run(() => registerVisitor({ name, purpose, department, appointmentId: apptId ? Number(apptId) : null }), 'Visitor registered')}>Save record</button></div></>
+    <label className="field-label" htmlFor="v-name">Visitor name</label><input id="v-name" className="field-input" value={name} onChange={(e) => setName(e.target.value)} />
+    <label className="field-label" htmlFor="v-purpose">Purpose</label><input id="v-purpose" className="field-input" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+    <label className="field-label" htmlFor="v-dept">Destination office</label><select id="v-dept" className="field-input" value={department} disabled={profile.role === 'approver'} onChange={(e) => { setDepartment(e.target.value); setApptId('') }}>{depts.map((d) => <option key={d}>{d}</option>)}</select>
+    <label className="field-label" htmlFor="v-appt">Appointment reference (optional)</label><select id="v-appt" className="field-input" value={apptId} onChange={(e) => setApptId(e.target.value)}><option value="">None</option>{linkable.map((x) => <option key={x.id} value={x.id}>{code(x.id)} · {x.requester_name}</option>)}</select>
+    <div className="form-actions"><button className="primary-button" disabled={!name.trim() || !purpose.trim() || busy} onClick={() => run(() => registerVisitor({ name, purpose, department, appointmentId: apptId ? Number(apptId) : null }), 'Visitor registered')}>Save record</button></div></>
 }
 
 function Availability({ profile, avail, depts, run, refreshing }: { profile: Profile; avail: Avail[]; depts: string[]; run: Run; refreshing: boolean }) {
   const [dept, setDept] = useState(profile.department ?? depts[0])
   const on = new Set(avail.filter((a) => a.department === dept).map((a) => `${a.weekday}-${a.time}`))
   return <div className="panel"><div className="panel-heading"><div><h2>{dept}</h2></div>
-    {profile.role === 'admin' && <div className="filters"><label className="modal-label" htmlFor="a-dept">Office</label><select id="a-dept" className="modal-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}</div>
+    {profile.role === 'admin' && <div className="filters"><label className="field-label" htmlFor="a-dept">Office</label><select id="a-dept" className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}</div>
     <div className="table-wrap" aria-busy={refreshing}><table className="table"><thead><tr><th>Slot</th>{WEEKDAYS.map((w) => <th key={w.n}>{w.label}</th>)}</tr></thead>
       <tbody>{SLOTS.map((t) => <tr key={t}><td>{t}</td>{WEEKDAYS.map((w) => <td key={w.n}><input type="checkbox" aria-label={`${w.label} ${t}`} checked={on.has(`${w.n}-${t}`)} onChange={(e) => run(() => toggleSlot(dept, w.n, t, e.target.checked), 'Availability updated')} /></td>)}</tr>)}</tbody></table></div></div>
 }
@@ -313,16 +314,16 @@ function UserRow({ u, self, depts, run, busy }: { u: Profile; self: boolean; dep
   const [dept, setDept] = useState(u.department ?? depts[0])
   const changed = role !== u.role || (role === 'approver' && dept !== u.department)
   return <div className="request-row"><span className={`avatar avatar-${tone(u.full_name.length)}`}>{initials(u.full_name)}</span>
-    <span className="request-person"><strong>{u.full_name || 'No name'}</strong><span>{u.email}</span></span>
-    <span className="request-detail"><select aria-label={`Role for ${u.email}`} className="modal-input" value={role} disabled={self} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
-      {role === 'approver' && <select aria-label={`Office for ${u.email}`} className="modal-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>}</span>
+    <span className="request-person"><strong>{u.full_name || 'No name'}</strong><span>{u.email}{u.gender ? ` · ${GENDER_LABEL[u.gender]}` : ''}</span></span>
+    <span className="request-detail"><select aria-label={`Role for ${u.email}`} className="field-input" value={role} disabled={self} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
+      {role === 'approver' && <select aria-label={`Office for ${u.email}`} className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>}</span>
     <span className="row-actions">{u.role === 'visitor' && <button className="secondary-button" disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</button>}<button className="secondary-button" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'User updated')}>Save</button></span></div>
 }
 
 function Offices({ departments, run, busy, refreshing }: { departments: Dept[]; run: Run; busy: boolean; refreshing: boolean }) {
   const [name, setName] = useState('')
   return <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(departments.length, 2), 5)} label="Refreshing offices" /> : departments.map((d) => <div className="request-row" key={d.name}><span className="request-person"><strong>{d.name}</strong><span>{d.active ? 'Takes appointments' : 'Not participating'}</span></span><span className="row-actions"><button className="secondary-button" disabled={busy} onClick={() => run(() => saveOffice(d.name, !d.active), d.active ? 'Office deactivated' : 'Office activated')}>{d.active ? 'Deactivate' : 'Activate'}</button></span></div>)}</div>
-    <div className="modal-actions"><label className="modal-label" htmlFor="o-name">New office</label><input id="o-name" className="modal-input" value={name} onChange={(e) => setName(e.target.value)} /><button className="primary-button" disabled={!name.trim() || busy} onClick={() => run(async () => { const r = await saveOffice(name, true); if (!r.error) setName(''); return r }, 'Office added')}>Add office</button></div></div>
+    <div className="form-actions"><label className="field-label" htmlFor="o-name">New office</label><input id="o-name" className="field-input" value={name} onChange={(e) => setName(e.target.value)} /><button className="primary-button" disabled={!name.trim() || busy} onClick={() => run(async () => { const r = await saveOffice(name, true); if (!r.error) setName(''); return r }, 'Office added')}>Add office</button></div></div>
 }
 
 function ConfirmButton({ label, confirmLabel, disabled, onConfirm }: { label: string; confirmLabel: string; disabled: boolean; onConfirm: () => void }) {

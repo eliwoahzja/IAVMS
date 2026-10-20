@@ -1,9 +1,10 @@
-import type { Role, Status } from './types'
+import type { Gender, Role, Status } from './types'
 
 export const SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM']
 export const WEEKDAYS = [{ n: 1, label: 'Mon' }, { n: 2, label: 'Tue' }, { n: 3, label: 'Wed' }, { n: 4, label: 'Thu' }, { n: 5, label: 'Fri' }]
 export const STATUSES: Status[] = ['Pending', 'Approved', 'Rescheduled', 'Rejected', 'Cancelled']
 export const ROLES: Role[] = ['student', 'faculty', 'visitor', 'approver', 'admin']
+export const GENDERS: Gender[] = ['male', 'female']
 export const isRequester = (r: Role) => r === 'student' || r === 'faculty' || r === 'visitor'
 
 export const code = (id: number) => `APT-${String(id).padStart(4, '0')}`
@@ -11,6 +12,7 @@ export const initials = (name: string) => name.split(' ').filter(Boolean).map((p
 export const tone = (id: number) => (['coral', 'sage', 'lavender', 'sand'] as const)[id % 4]
 export const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
 export const TYPE_LABEL: Record<string, string> = { student: 'Student', faculty: 'Faculty member', visitor: 'External visitor', approver: 'Department approver', admin: 'Administrator' }
+export const GENDER_LABEL: Record<Gender, string> = { male: 'Male', female: 'Female' }
 
 export const personLabel = (name: string) => {
   const trimmed = name.trim()
