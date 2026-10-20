@@ -3,10 +3,6 @@ import { SkeletonRows } from '@/components/skeleton'
 import { TYPE_LABEL, initials, personLabel, tone } from '@/lib/constants'
 import type { Profile } from '@/lib/types'
 
-/** First paint for a returning user. The chrome is real — seal, nav, their own
-    card — so the workspace appears instantly and only the data arrives late.
-    Rendered on the server inside the page's Suspense boundary, so it streams as
-    static HTML before a single query resolves. */
 export function DashboardSkeleton({ profile, rows = 3 }: { profile: Profile; rows?: number }) {
   return <div className="app-shell">
     <aside className="sidebar">

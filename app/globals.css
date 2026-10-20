@@ -1,8 +1,6 @@
 @import 'tailwindcss';
 
-
 :root {
-  /* Neutral scale tinted to the SPCC navy, darkest to lightest. */
   --g01: #1d204d;
   --g02: #202454;
   --g03: #202455;
@@ -221,7 +219,6 @@ textarea.modal-input { resize: vertical; }
 .notification-item strong { color: var(--g07); font-size: 0.8125rem; }.notification-item p { margin: 0; color: var(--g35); font-size: 0.75rem; line-height: 1.4; }.notification-item small { color: var(--g58); font-size: 0.75rem; }
 @media (max-width: 480px) { .modal-backdrop { align-items: end; padding: 10px; }.modal-card { max-height: calc(100vh - 20px); padding: 20px 16px; border-radius: 18px; }.modal-header { margin-bottom: 18px; }.modal-header h2 { font-size: 1.3125rem; }.modal-actions { flex-wrap: wrap; }.modal-actions .primary-button, .modal-actions .secondary-button { flex: 1; }.wizard-steps span { font-size: 0.75rem; }.choice-grid, .slot-grid { grid-template-columns: 1fr 1fr; gap: 8px; }.choice-card { min-height: 72px; padding: 11px; font-size: 0.8125rem; } }
 
-
 .panel-kicker, .empty-copy { color: var(--muted-foreground); font-size: 0.75rem; }
 .empty-copy { padding: 18px 0; text-align: center; }
 .primary-button:disabled, .choice-card:disabled { opacity: .5; cursor: not-allowed; }
@@ -239,10 +236,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .table th { color: var(--muted-foreground); font-size: 0.75rem; font-weight: 700;  letter-spacing: 0; }
 .table input[type='checkbox'] { width: 18px; height: 18px; }
 
-/* Auth: one navy parallelogram that slides across the canvas as a single
-   image when the visitor switches forms (both edges slanted, magazine-cover
-   style); the card trades sides in the same move. All brand copy rides
-   inside the slab, so nothing is ever left stranded on the wrong side. */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .field-row { position: relative; }
 .password-toggle { position: absolute; right: 8px; bottom: 7px; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 9px; color: var(--g43); background: transparent; transition: color .15s, background-color .15s; }
@@ -257,16 +250,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .user-card strong { overflow: hidden; color: #fff; font-size: .8125rem; font-weight: 700; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
 .user-card small { overflow: hidden; color: rgba(255, 255, 255, .6); font-size: .71875rem; text-overflow: ellipsis; white-space: nowrap; }
 .user-card-role { align-self: flex-start; padding: 4px 9px; border: 1px solid rgba(227, 169, 0, .32); border-radius: 20px; color: var(--gold); background: rgba(227, 169, 0, .13); font-size: .71875rem; font-weight: 700; letter-spacing: .01em; }
-/* Sign out is a control, not a caption: it sits directly under .user-card and
-   shares that card's 4px gutter and 11-ish radius so the sidebar bottom reads
-   as one stack. 44px tall so it stays a comfortable thumb target in the sheet. */
 .sidebar-bottom form { margin: 0 4px; }
 .signout { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 11px; background: rgba(255, 255, 255, .06); font-size: .8125rem; font-weight: 700; letter-spacing: .01em; color: rgba(255, 255, 255, .86); }
 .signout svg { flex: none; width: 15px; height: 15px; }
 
 .muted-note { margin: 12px 0 0; color: var(--muted-foreground); font-size: 0.75rem; line-height: 1.45; }
 
-/* SPCC theme: navy #010062 and gold #eaae02, sampled from the school seal. */
 :root { --navy: #07095f; --gold: #e3a900; --ease: cubic-bezier(.2, .8, .2, 1); }
 .sidebar { background: var(--navy); border-right: 0; color: #fff; }
 .brand-seal { flex: none; width: 38px; height: 38px; border-radius: 50%; }
@@ -276,9 +265,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .nav-item b { color: var(--navy); background: var(--gold); }
 .mobile-close { color: #fff; background: transparent; }
 .user-block strong { color: #fff; } .user-block small { color: rgba(255,255,255,.62); }
-/* Gold is this system's state colour (active nav, role pill, badge), so the sign
-   out container stays neutral-white like .user-card and only picks gold up on
-   hover — otherwise three gold boxes stack in the last 120px of the sidebar. */
 .signout:hover { color: #fff; border-color: rgba(227, 169, 0, .55); background: rgba(227, 169, 0, .16); }
 .privacy-text { margin: 4px 9px 10px; color: rgba(255,255,255,.55); font-size: 0.75rem; line-height: 1.45; }
 .primary-button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
@@ -293,7 +279,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .status-cancelled { color: #5d6377; background: #eceef4; } .status-cancelled span { background: #9aa0b4; }
 .modal-backdrop { background: rgba(7, 9, 95, .45); }
 
-/* Motion: transform and opacity only, one springy ease everywhere. */
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
@@ -305,15 +290,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .modal-card, .toast { animation: pop .24s var(--ease) both; }
 .skeleton { display: block; height: 46px; border-radius: 9px; background: #dde2f5; animation: pulse 1.1s ease-in-out infinite; }
 
-/* Skeletons reuse the real row grid and the real card heights, so the swap to
-   live data never shifts anything under the cursor. The sheen is transform-only
-   and clipped by the box, so shimmering costs no layout or outside paint. */
 .skeleton { position: relative; overflow: hidden; }
 .skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .8), transparent); transform: translateX(-100%); animation: sheen 1.3s var(--ease) infinite; }
 @keyframes sheen { to { transform: translateX(100%); } }
 .skeleton-list { display: flex; flex-direction: column; }
-/* 63px, not the 57px row minimum: a real three-line row measures 63, so this is
-   what keeps the list from jumping when the data lands. */
 .skeleton-row { display: grid; grid-template-columns: auto minmax(135px, 1fr) minmax(120px, .75fr) auto; align-items: center; gap: 11px; min-height: 63px; border-top: 1px solid var(--g87); animation: fade .18s ease-out both; }
 .skeleton-row:first-child { border-top: 0; }
 .skeleton-avatar { width: 30px; height: 30px; border-radius: 50%; }
@@ -330,7 +310,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .sidebar .skeleton { background: rgba(255, 255, 255, .12); }
 .sidebar .skeleton::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent); }
 .table-wrap[aria-busy='true'] { opacity: .55; transition: opacity .18s var(--ease); }
-/* Rows were inert on hover, which made every list feel like a screenshot. */
 .request-row { transition: background-color .15s var(--ease); }
 .request-row:hover { background: rgba(7, 9, 95, .04); }
 @media (max-width: 1050px) { .skeleton-row { grid-template-columns: auto minmax(120px, 1fr) auto auto; } }
@@ -342,7 +321,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .primary-button:active:not(:disabled), .secondary-button:active:not(:disabled), .icon-button:active, .choice-card:active:not(:disabled), .nav-item:active, .signout:active { transform: scale(.97); }
 .sidebar { transition: transform .24s var(--ease); }
 
-/* Polish: system type, sticky translucent bar, sheet, reduced motion */
 html { -webkit-tap-highlight-color: transparent; }
 button, a, input, select, textarea, label { touch-action: manipulation; }
 h1, h2 { text-wrap: balance; }
@@ -387,7 +365,6 @@ h1, h2 { text-wrap: balance; }
   .nav-item-active { box-shadow: inset 4px 0 0 var(--gold); background: rgba(255, 255, 255, .22); }
 }
 
-/* Sign in and sign up: two panels on a sliding rail, one card on a phone. */
 .auth-page {
   display: grid;
   grid-template-columns: 1fr;
@@ -410,7 +387,6 @@ h1, h2 { text-wrap: balance; }
 
 .auth-slider { position: relative; overflow: hidden; border-radius: 24px; background: #fff; box-shadow: 0 30px 70px rgba(3, 4, 40, .45); }
 
-/* Panel internals, shared by the desktop rail and the phone card. */
 .auth-panel-inner { box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
 .auth-panel h1 { margin: 0; color: var(--ink); font-size: 1.5rem; line-height: 1.2; letter-spacing: -.02em; font-weight: 650; }
 .auth-panel-sub { margin: 7px 0 0; color: var(--muted-foreground); font-size: .875rem; line-height: 1.5; }
@@ -425,10 +401,6 @@ h1, h2 { text-wrap: balance; }
 .auth-consent input { flex: none; width: 20px; height: 20px; margin-top: 1px; accent-color: var(--navy); }
 .auth-submit { width: 100%; min-height: 48px; margin-top: 16px; justify-content: center; border-radius: 12px; font-size: 1rem; }
 
-/* The slab that sweeps across the rail. */
-/* Only the slab's outer edges are rounded, matching the card's radius so the two curves
-   agree; left to the parent's clip alone they disagree and leave a light hairline. The
-   inner edge stays square so the seam with the form is a straight line. */
 .auth-overlay { overflow: hidden; border-radius: 0 24px 24px 0; background: linear-gradient(158deg, #05063c 0%, var(--navy) 44%, #171c74 100%); }
 .auth-overlay-panel { position: absolute; top: 0; display: flex; flex-direction: column; justify-content: center; width: 50%; height: 100%; padding: 44px; color: #fff; }
 .auth-overlay-kicker { margin: 0 0 12px; color: var(--gold); font-size: .75rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
@@ -445,20 +417,13 @@ h1, h2 { text-wrap: balance; }
 
 .auth-mode-toggle { display: none; }
 
-/* Wide screens: both forms on one rail, the slab sweeping to the other half. */
 @media (min-width: 900px) {
-  /* Both panels share one grid cell, so the card takes the height of the taller form
-     instead of clipping it. The panels then slide out of that cell as transforms. */
   .auth-slider { display: grid; grid-template-columns: 1fr 1fr; }
   .auth-panel { grid-area: 1 / 1; width: 100%; background: #fff; transition: transform .6s ease-in-out, opacity .6s ease-in-out; }
   .auth-panel-inner { min-height: 100%; padding: 32px 38px; }
   .auth-panel-signin { z-index: 3; }
   .auth-panel-signup { z-index: 4; opacity: 0; pointer-events: none; }
   .auth-slider[data-mode='signup'] .auth-panel-signin { transform: translateX(100%); pointer-events: none; }
-  /* The slab covers both panels at the halfway point, so flipping the incoming panel from
-     invisible to opaque there happens out of sight. Fading it would show both forms
-     ghosted over each other as they cross. No fill-mode, so once the animation ends the
-     panel's own opacity takes over and the reverse slide can transition instead of snapping. */
   .auth-slider[data-mode='signup'] .auth-panel-signup { transform: translateX(100%); opacity: 1; pointer-events: auto; animation: auth-reveal .6s; }
 
   .auth-overlay { position: absolute; inset: 0 0 0 50%; z-index: 10; transition: transform .6s ease-in-out; }
@@ -472,7 +437,6 @@ h1, h2 { text-wrap: balance; }
   .auth-slider[data-mode='signup'] .auth-overlay-back { transform: translateX(0); }
 }
 
-/* Phones: one card, no slab, the chosen panel slides in from its own side. */
 @media (max-width: 899px) {
   .auth-slider { border-radius: 20px; }
   .auth-mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 14px 14px 0; padding: 4px; border-radius: 12px; background: var(--g92); }

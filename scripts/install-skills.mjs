@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-/**
- * Installs the design and UI skills this project leans on into ./skills.
- *
- * Skills are installed artifacts, not source: everything under skills/ is
- * gitignored except skills/README.md, so the app repo and its Vercel build stay
- * small. Run `node scripts/install-skills.mjs` after a fresh clone.
- *
- * Every source is pinned to a commit so two runs produce the same files.
- *
- * Binary extras that no skill here needs are skipped by default; pass --full to
- * install everything verbatim.
- */
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -69,9 +57,6 @@ const SKILLS = [
     license: 'MIT (c) 2024 Next Level Builder',
     dir: '.claude/skills',
     extras: [{ from: 'LICENSE', as: 'LICENSE' }],
-    // A shelf of .ttf files the canvas-poster reference reads from. This project does its
-    // styling in CSS, so the shelf is dead weight (5.5 MB); the reference falls back to
-    // system fonts when it is absent. `--full` installs them anyway.
     exclude: [/[/\\]canvas-fonts[/\\].*\.(ttf|txt)$/i],
   },
 ]
@@ -92,17 +77,13 @@ async function downloadFile(url, target) {
   writeFileSync(target, await res.text())
 }
 
-/** Sparse-clone a repo at a pinned commit so we never pull its full history or assets. */
 function checkout(repo, commit, dir) {
   const tmp = mkdtempSync(join(tmpdir(), 'skill-'))
   try {
     run('git', ['clone', '--quiet', '--depth', '1', '--filter=blob:none', '--sparse', `https://github.com/${repo}`, tmp])
-    // Cone mode only takes directories, which is all we need here. Loose root files
-    // such as LICENSE are fetched by URL instead of widening the sparse checkout.
     run('git', ['-C', tmp, 'sparse-checkout', 'set', dir])
 
     if (run('git', ['-C', tmp, 'rev-parse', 'HEAD']) !== commit) {
-      // The branch moved since this pin. Ask for the exact commit so the install stays reproducible.
       run('git', ['-C', tmp, 'fetch', '--quiet', '--depth', '1', 'origin', commit])
       run('git', ['-C', tmp, 'checkout', '--quiet', commit])
     }
@@ -162,7 +143,6 @@ if (!queue.length) {
   process.exit(1)
 }
 
-/** A skill is either one SKILL.md or a bundle of them one level down. */
 function describe(target) {
   const single = join(target, 'SKILL.md')
   if (existsSync(single)) {

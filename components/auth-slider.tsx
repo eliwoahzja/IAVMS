@@ -9,19 +9,12 @@ export type AuthMode = 'signin' | 'signup'
 
 const URL_FOR: Record<AuthMode, string> = { signin: '/login', signup: '/signup' }
 
-/**
- * Both forms live in one rail so switching between them is a transform, not a page
- * load. Wide screens slide the forms past an overlay slab; narrow screens drop the
- * slab and slide the active panel in on its own.
- */
 export function AuthSlider({ initialMode, error, msg }: {
   initialMode: AuthMode
   error?: string
   msg?: string
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode)
-  // A server action redirect lands here with its message in the URL. Once the visitor
-  // switches panels by hand that message no longer describes what they are looking at.
   const [notice, setNotice] = useState<{ error?: string; msg?: string }>({ error, msg })
   const up = mode === 'signup'
 
@@ -29,12 +22,9 @@ export function AuthSlider({ initialMode, error, msg }: {
     if (next === mode) return
     setMode(next)
     setNotice({})
-    // Shallow URL sync: /login and /signup stay shareable without remounting the panels.
     try {
       window.history.replaceState(null, '', URL_FOR[next])
-    } catch {
-      /* the panels still switched, only the address bar missed it */
-    }
+    } catch {}
   }
 
   return (

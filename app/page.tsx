@@ -15,9 +15,6 @@ export default async function Page() {
   if (!data) redirect('/login')
   const profile = data as Profile
 
-  // Both redirects resolve before this JSX is returned, so nothing has flushed
-  // yet and an unauthorised visit is still a real 307 rather than a client-side
-  // hop. Only the data behind the boundary streams in late.
   return <Suspense fallback={<DashboardSkeleton profile={profile} />}>
     <Workspace profile={profile} />
   </Suspense>
@@ -28,7 +25,6 @@ async function Workspace({ profile }: { profile: Profile }) {
   const staff = profile.role === 'admin' || profile.role === 'approver'
   const isAdmin = profile.role === 'admin'
 
-  // Row-level security already limits each query to what this role may see.
   const [appts, visitors, avail, users, emails, departments] = await Promise.all([
     rows<Appt>(sb.from('appointments').select('*').order('date').order('time')),
     staff ? rows<Visitor>(sb.from('visitors').select('*').order('created_at', { ascending: false })) : Promise.resolve([] as Visitor[]),

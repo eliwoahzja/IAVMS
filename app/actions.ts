@@ -198,7 +198,6 @@ export async function signIn(fd: FormData) {
 export async function signUp(fd: FormData) {
   if (fd.get('consent') !== 'on') back('/signup', 'error', 'Tick the box to accept the privacy notice.')
   const type = String(fd.get('type'))
-  // The form asks for the name in three parts so the sidebar can show it surname-first.
   const last = String(fd.get('last_name')).trim()
   const first = String(fd.get('first_name')).trim()
   const middle = String(fd.get('middle_name') ?? '').trim().replace(/\.$/, '')

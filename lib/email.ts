@@ -21,13 +21,11 @@ async function log(a: Mailable, to: string, event: string, r: { status: string; 
   await admin().from('email_log').insert({ appointment_id: a.id, to_email: to, event, status: r.status, detail: r.detail })
 }
 
-/** Tells the requester about a status or schedule change. The text carries no purpose or other personal detail. */
 export async function notify(a: Mailable, event: string) {
   const text = `Hello ${a.requester_name},\n\nYour appointment with ${a.department} on ${day(a.date)} at ${a.time} is ${event}.\n\nSystems Plus Computer College, Caloocan`
   await log(a, a.requester_email, event, await send(a.requester_email, `SPCC appointment ${code(a.id)}: ${event}`, text))
 }
 
-/** Tells the office's approvers that a request is waiting. */
 export async function notifyOffice(a: Mailable) {
   const { data } = await admin().from('profiles').select('email').eq('role', 'approver').eq('department', a.department)
   for (const s of (data ?? []) as { email: string }[]) {

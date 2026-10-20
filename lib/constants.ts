@@ -12,8 +12,6 @@ export const tone = (id: number) => (['coral', 'sage', 'lavender', 'sand'] as co
 export const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
 export const TYPE_LABEL: Record<string, string> = { student: 'Student', faculty: 'Faculty member', visitor: 'External visitor', approver: 'Department approver', admin: 'Administrator' }
 
-/** Shows a name as Last, First M. for the sidebar card. Sign-up already stores
-    names in that shape ("Last, First M."), so commas pass through untouched. */
 export const personLabel = (name: string) => {
   const trimmed = name.trim()
   if (trimmed.includes(',')) return trimmed

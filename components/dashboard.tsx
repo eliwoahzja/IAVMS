@@ -13,8 +13,6 @@ type Group = 'requester' | 'approver' | 'admin'
 type Modal = null | 'book' | 'visitor' | { review: Appt }
 type Run = (fn: () => Promise<R>, ok: string) => void
 
-/** True a beat after `active` flips, so a 200 ms action never flashes skeletons
-    over content the user is already reading. */
 function usePending(active: boolean, delay = 140) {
   const [shown, setShown] = useState(false)
   useEffect(() => {
@@ -25,9 +23,6 @@ function usePending(active: boolean, delay = 140) {
   return shown
 }
 
-/** Counts from the previous value to the new one, so a changed total reads as a
-    change rather than a swap. First paint keeps the real number: no 0 → N drop
-    after hydration, and the server render is already correct. */
 function CountUp({ value }: { value: number }) {
   const [n, setN] = useState(value)
   const seen = useRef(value)
@@ -185,7 +180,6 @@ function ModalBox({ title, onClose, children }: { title: string; onClose: () => 
     c.style.transform = `translate3d(0, ${v}px, 0)`
     if (scrim.current) scrim.current.style.opacity = String(Math.max(0, 1 - (Math.max(0, v) / (c.offsetHeight || 1)) * 0.9))
   }
-  // Every move starts from the sheet's live position and velocity, so a grab mid-flight never jumps.
   function settle(to: number, velocity: number, done?: () => void) {
     stop.current()
     stop.current = springTo(offset.current, to, velocity, 0.4, apply, done)
@@ -233,7 +227,6 @@ function ModalBox({ title, onClose, children }: { title: string; onClose: () => 
     const b = d.samples[d.samples.length - 1]
     const v = b.t > a.t ? ((b.y - a.y) / (b.t - a.t)) * 1000 : 0
     const h = card.current.offsetHeight
-    // Release velocity decides the outcome; position plus projected momentum breaks ties.
     const dismiss = v > 900 || (v > -900 && offset.current + project(v) > h * 0.5)
     if (dismiss) settle(h, v, onClose)
     else settle(0, v)
