@@ -15,6 +15,20 @@ Pass one or more names to reinstall just those (`node scripts/install-skills.mjs
 Every source is pinned to a commit, so a run is reproducible. Each installed skill
 carries a `SOURCE.md` with its upstream URL, commit and license.
 
+### Slim by default
+
+`ui-ux-pro-max` ships an 81-file, 5.5 MB shelf of `.ttf` files under
+`ui-styling/canvas-fonts`, which its canvas-poster reference searches when building
+print and social artwork. Nothing in this project does that, so the installer skips
+them and the install is 7.2 MB instead of 13 MB. The reference falls back to system
+fonts when the shelf is absent.
+
+Install them anyway:
+
+```bash
+node scripts/install-skills.mjs ui-ux-pro-max --full
+```
+
 ## What is installed
 
 | Skill | Upstream | License | What it is for |
@@ -22,7 +36,7 @@ carries a `SOURCE.md` with its upstream URL, commit and license.
 | `frontend-design` | [anthropics/claude-code](https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design) | All rights reserved (Anthropic PBC) | Aesthetic direction, typography, avoiding templated-looking output |
 | `apple-design` | [emilkowalski/skills](https://github.com/emilkowalski/skills) | MIT | Fluid, physical motion: springs, velocity handoff, momentum, materials, type detail |
 | `impeccable` | [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | Apache-2.0 | Broad design language: shape, critique, audit, polish, animate, harden, tokens |
-| `ui-ux-pro-max` | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | A bundle of 7 skills (design, design-system, ui-styling, ui-ux-pro-max, brand, banner-design, slides) with local reference data |
+| `ui-ux-pro-max` | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | A bundle of 7 skills (design, design-system, ui-styling, ui-ux-pro-max, brand, banner-design, slides) with local reference data. Canvas fonts trimmed; see below |
 | `no-ai-slop` | [petergyang/no-ai-slop](https://github.com/petergyang/no-ai-slop) | MIT | Editing prose: strips AI writing patterns while keeping the writer's voice |
 
 ## Licensing note

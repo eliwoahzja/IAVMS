@@ -7,6 +7,9 @@
  * small. Run `node scripts/install-skills.mjs` after a fresh clone.
  *
  * Every source is pinned to a commit so two runs produce the same files.
+ *
+ * Binary extras that no skill here needs are skipped by default; pass --full to
+ * install everything verbatim.
  */
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -66,8 +69,14 @@ const SKILLS = [
     license: 'MIT (c) 2024 Next Level Builder',
     dir: '.claude/skills',
     extras: [{ from: 'LICENSE', as: 'LICENSE' }],
+    // A shelf of .ttf files the canvas-poster reference reads from. This project does its
+    // styling in CSS, so the shelf is dead weight (5.5 MB); the reference falls back to
+    // system fonts when it is absent. `--full` installs them anyway.
+    exclude: [/[/\\]canvas-fonts[/\\].*\.(ttf|txt)$/i],
   },
 ]
+
+const full = process.argv.slice(2).some((a) => a === '--full')
 
 function run(cmd, args, cwd) {
   const out = spawnSync(cmd, args, { cwd, encoding: 'utf8' })
@@ -115,8 +124,10 @@ async function install(skill) {
     }
   } else {
     const tmp = checkout(skill.repo, skill.commit, skill.dir)
+    const skip = full ? [] : (skill.exclude ?? [])
+    const filter = (src) => !skip.some((re) => re.test(src))
     try {
-      cpSync(join(tmp, skill.dir), target, { recursive: true })
+      cpSync(join(tmp, skill.dir), target, { recursive: true, filter })
     } finally {
       rmSync(tmp, { recursive: true, force: true })
     }
@@ -167,7 +178,8 @@ let failed = 0
 for (const skill of queue) {
   try {
     const target = await install(skill)
-    console.log(`ok   ${skill.name.padEnd(18)} ${describe(target)}`)
+    const trimmed = !full && skill.exclude?.length ? '  (trimmed)' : ''
+    console.log(`ok   ${skill.name.padEnd(18)} ${describe(target)}${trimmed}`)
   } catch (err) {
     failed += 1
     console.error(`FAIL ${skill.name.padEnd(18)} ${err.message.split('\n')[0]}`)
