@@ -345,27 +345,108 @@ h1, h2 { text-wrap: balance; }
   .nav-item-active { box-shadow: inset 4px 0 0 var(--gold); background: rgba(255, 255, 255, .22); }
 }
 
-/* Sign in and sign up: one column, one card, one entrance. */
-.auth-page { display: grid; min-height: 100vh; min-height: 100dvh; place-items: center; padding: 28px 16px max(28px, env(safe-area-inset-bottom)); background: var(--navy); }
-.auth-shell { width: 100%; max-width: 420px; }
+/* Sign in and sign up: two panels on a sliding rail, one card on a phone. */
+.auth-page {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  align-content: center;
+  align-content: safe center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px 16px max(32px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(1040px 560px at 82% -12%, rgba(227, 169, 0, .18), transparent 60%),
+    radial-gradient(820px 520px at 2% 108%, rgba(255, 255, 255, .12), transparent 58%),
+    var(--navy);
+}
+.auth-shell { width: 100%; max-width: 940px; }
 .auth-brand { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 22px; color: #fff; text-align: center; }
-.auth-seal { width: 76px; height: 76px; margin-bottom: 8px; border-radius: 50%; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }
+.auth-seal { width: 68px; height: 68px; margin-bottom: 8px; border-radius: 50%; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }
 .auth-brand strong { font-size: 1.25rem; font-weight: 650; letter-spacing: -.02em; }
 .auth-brand span { color: rgba(255, 255, 255, .72); font-size: .875rem; }
-.auth-card { padding: 26px 22px 22px; border-radius: 20px; background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); animation: pop .35s var(--ease) backwards; }
-.auth-card h1 { margin: 0; font-size: 1.375rem; line-height: 1.2; letter-spacing: -.02em; font-weight: 650; }
-.auth-card .modal-label { display: block; margin: 16px 0 6px; font-size: .875rem; font-weight: 600; }
-.auth-card .modal-input { box-sizing: border-box; width: 100%; min-height: 48px; padding: 12px 14px; font-size: 1rem; border-radius: 12px; }
-.auth-card .modal-input:focus { border-color: var(--navy); outline: none; box-shadow: 0 0 0 3px rgba(227, 169, 0, .4); }
+
+.auth-slider { position: relative; overflow: hidden; border-radius: 24px; background: #fff; box-shadow: 0 30px 70px rgba(3, 4, 40, .45); }
+
+/* Panel internals, shared by the desktop rail and the phone card. */
+.auth-panel-inner { box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
+.auth-panel h1 { margin: 0; color: var(--ink); font-size: 1.5rem; line-height: 1.2; letter-spacing: -.02em; font-weight: 650; }
+.auth-panel-sub { margin: 7px 0 0; color: var(--muted-foreground); font-size: .875rem; line-height: 1.5; }
+.auth-panel .modal-label { display: block; margin: 12px 0 5px; font-size: .8125rem; font-weight: 600; }
+.auth-panel .modal-input { box-sizing: border-box; width: 100%; min-height: 44px; padding: 11px 13px; border-radius: 11px; font-size: .9375rem; }
+.auth-panel .modal-input:focus { border-color: var(--navy); outline: none; box-shadow: 0 0 0 3px rgba(227, 169, 0, .32); }
 .auth-names { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.auth-optional { color: var(--muted-foreground); font-weight: 400; }
 .auth-hint { margin: 6px 0 0; color: var(--muted-foreground); font-size: .8125rem; }
 .auth-note { margin: 14px 0 0; padding: 10px 12px; border-radius: 10px; background: #e4e8f7; color: var(--navy); font-size: .875rem; line-height: 1.45; }
 .auth-error { color: #9b2c2c; background: #fbe3e3; }
-.auth-consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; font-size: .8125rem; line-height: 1.5; }
+.auth-consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; font-size: .8125rem; line-height: 1.5; }
 .auth-consent input { flex: none; width: 20px; height: 20px; margin-top: 1px; accent-color: var(--navy); }
-.auth-submit { width: 100%; min-height: 48px; margin-top: 20px; justify-content: center; border-radius: 12px; font-size: 1rem; }
-.auth-switch { margin: 18px 0 0; color: var(--muted-foreground); font-size: .875rem; text-align: center; }
-.auth-switch a { color: var(--navy); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.auth-submit { width: 100%; min-height: 48px; margin-top: 16px; justify-content: center; border-radius: 12px; font-size: 1rem; }
+
+/* The slab that sweeps across the rail. */
+/* Only the slab's outer edges are rounded, matching the card's radius so the two curves
+   agree; left to the parent's clip alone they disagree and leave a light hairline. The
+   inner edge stays square so the seam with the form is a straight line. */
+.auth-overlay { overflow: hidden; border-radius: 0 24px 24px 0; background: linear-gradient(158deg, #05063c 0%, var(--navy) 44%, #171c74 100%); }
+.auth-overlay-panel { position: absolute; top: 0; display: flex; flex-direction: column; justify-content: center; width: 50%; height: 100%; padding: 44px; color: #fff; }
+.auth-overlay-kicker { margin: 0 0 12px; color: var(--gold); font-size: .75rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.auth-overlay-panel h2 { margin: 0 0 12px; font-size: 1.75rem; line-height: 1.18; letter-spacing: -.025em; font-weight: 650; }
+.auth-overlay-panel p { margin: 0; color: rgba(255, 255, 255, .74); font-size: .9375rem; line-height: 1.6; }
+.auth-points { display: grid; gap: 12px; margin: 24px 0 0; padding: 0; list-style: none; }
+.auth-points li { display: flex; align-items: flex-start; gap: 10px; color: rgba(255, 255, 255, .82); font-size: .875rem; line-height: 1.5; }
+.auth-points svg { flex: none; width: 17px; height: 17px; margin-top: 2px; color: var(--gold); }
+.auth-ghost { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; margin-top: 28px; padding: 12px 22px; border: 1.5px solid rgba(255, 255, 255, .4); border-radius: 999px; color: #fff; background: transparent; font-size: .9375rem; font-weight: 650; cursor: pointer; transition: background-color .2s, border-color .2s, transform .12s var(--ease); }
+.auth-ghost:hover { border-color: rgba(255, 255, 255, .75); background: rgba(255, 255, 255, .12); }
+.auth-ghost:active { transform: scale(.97); }
+.auth-ghost svg { width: 16px; height: 16px; transition: transform .25s var(--ease); }
+.auth-ghost:hover svg { transform: translateX(3px); }
+
+.auth-mode-toggle { display: none; }
+
+/* Wide screens: both forms on one rail, the slab sweeping to the other half. */
+@media (min-width: 900px) {
+  /* Both panels share one grid cell, so the card takes the height of the taller form
+     instead of clipping it. The panels then slide out of that cell as transforms. */
+  .auth-slider { display: grid; grid-template-columns: 1fr 1fr; }
+  .auth-panel { grid-area: 1 / 1; width: 100%; background: #fff; transition: transform .6s ease-in-out, opacity .6s ease-in-out; }
+  .auth-panel-inner { min-height: 100%; padding: 32px 38px; }
+  .auth-panel-signin { z-index: 3; }
+  .auth-panel-signup { z-index: 4; opacity: 0; pointer-events: none; }
+  .auth-slider[data-mode='signup'] .auth-panel-signin { transform: translateX(100%); pointer-events: none; }
+  /* The slab covers both panels at the halfway point, so flipping the incoming panel from
+     invisible to opaque there happens out of sight. Fading it would show both forms
+     ghosted over each other as they cross. No fill-mode, so once the animation ends the
+     panel's own opacity takes over and the reverse slide can transition instead of snapping. */
+  .auth-slider[data-mode='signup'] .auth-panel-signup { transform: translateX(100%); opacity: 1; pointer-events: auto; animation: auth-reveal .6s; }
+
+  .auth-overlay { position: absolute; inset: 0 0 0 50%; z-index: 10; transition: transform .6s ease-in-out; }
+  .auth-slider[data-mode='signup'] .auth-overlay { transform: translateX(-100%); border-radius: 24px 0 0 24px; }
+  .auth-overlay-track { position: relative; left: -100%; width: 200%; height: 100%; transition: transform .6s ease-in-out; }
+  .auth-slider[data-mode='signup'] .auth-overlay-track { transform: translateX(50%); }
+  .auth-overlay-panel { transition: transform .6s ease-in-out; }
+  .auth-overlay-new { right: 0; transform: translateX(0); }
+  .auth-slider[data-mode='signup'] .auth-overlay-new { transform: translateX(20%); }
+  .auth-overlay-back { left: 0; transform: translateX(-20%); }
+  .auth-slider[data-mode='signup'] .auth-overlay-back { transform: translateX(0); }
+}
+
+/* Phones: one card, no slab, the chosen panel slides in from its own side. */
+@media (max-width: 899px) {
+  .auth-slider { border-radius: 20px; }
+  .auth-mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 14px 14px 0; padding: 4px; border-radius: 12px; background: var(--g92); }
+  .auth-mode-tab { padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--g27); font-size: .8125rem; font-weight: 700; cursor: pointer; transition: color .2s, background-color .2s, box-shadow .2s; }
+  .auth-mode-tab[aria-pressed='true'] { color: var(--navy); background: #fff; box-shadow: 0 1px 3px rgba(7, 9, 95, .16); }
+  .auth-overlay { display: none; }
+  .auth-panel { display: none; }
+  .auth-panel-inner { padding: 18px 20px 24px; }
+  .auth-slider[data-mode='signin'] .auth-panel-signin { display: block; animation: auth-in-left .42s var(--ease) both; }
+  .auth-slider[data-mode='signup'] .auth-panel-signup { display: block; animation: auth-in-right .42s var(--ease) both; }
+}
+@keyframes auth-reveal { 0%, 49.99% { opacity: 0; } 50%, 100% { opacity: 1; } }
+@keyframes auth-in-left { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@keyframes auth-in-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 @media (max-width: 380px) { .auth-names { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) { .auth-card { animation: fade .2s ease-out backwards; } }
+@media (prefers-reduced-motion: reduce) {
+  .auth-panel, .auth-overlay, .auth-overlay-track, .auth-overlay-panel, .auth-ghost svg { transition: none; }
+  .auth-slider[data-mode] .auth-panel { animation: none; }
+}
