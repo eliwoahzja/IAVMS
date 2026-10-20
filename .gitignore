@@ -16,3 +16,7 @@ node_modules
 .DS_Store
 next-env.d.ts
 *.tsbuildinfo
+
+# Installed agent skills, restored by scripts/install-skills.mjs
+skills/*
+!skills/README.md
