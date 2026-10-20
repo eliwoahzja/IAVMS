@@ -20,3 +20,5 @@ next-env.d.ts
 # Installed agent skills, restored by scripts/install-skills.mjs
 skills/*
 !skills/README.md
+# Local browser-capture harness (not shipped)
+.capture/

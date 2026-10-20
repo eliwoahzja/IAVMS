@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
-import { CalendarDays, Check, ClipboardCheck, Clock3, FileText, Grid2X2, LayoutDashboard, Menu, Plus, Search, Settings, UsersRound, X } from 'lucide-react'
+import { CalendarDays, Check, ClipboardCheck, Clock3, FileText, Grid2X2, LayoutDashboard, LogOut, Menu, Plus, Search, Settings, UsersRound, X } from 'lucide-react'
 import { book, cancel, decide, markVisit, registerVisitor, saveOffice, setAuthorized, setUserRole, signOut, slotStates, toggleSlot } from '@/app/actions'
+import { SkeletonRows, SkeletonTableRows } from '@/components/skeleton'
 import { ROLES, SLOTS, STATUSES, TYPE_LABEL, WEEKDAYS, code, day, initials, personLabel, tone } from '@/lib/constants'
 import { project, rubberband, springTo } from '@/lib/spring'
 import type { Appt, Avail, Dept, MailRow, Profile, R, Role, SlotInfo, Status, Visitor } from '@/lib/types'
@@ -11,6 +12,34 @@ type Tab = 'Summary' | 'Appointments' | 'Visitors' | 'Availability' | 'Reports' 
 type Group = 'requester' | 'approver' | 'admin'
 type Modal = null | 'book' | 'visitor' | { review: Appt }
 type Run = (fn: () => Promise<R>, ok: string) => void
+
+/** True a beat after `active` flips, so a 200 ms action never flashes skeletons
+    over content the user is already reading. */
+function usePending(active: boolean, delay = 140) {
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    if (!active) { setShown(false); return }
+    const t = window.setTimeout(() => setShown(true), delay)
+    return () => window.clearTimeout(t)
+  }, [active, delay])
+  return shown
+}
+
+/** Counts from the previous value to the new one, so a changed total reads as a
+    change rather than a swap. First paint keeps the real number: no 0 → N drop
+    after hydration, and the server render is already correct. */
+function CountUp({ value }: { value: number }) {
+  const [n, setN] = useState(value)
+  const seen = useRef(value)
+  useEffect(() => {
+    if (seen.current === value) return
+    const from = seen.current
+    seen.current = value
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setN(value); return }
+    return springTo(from, value, 0, 0.45, (v) => setN(Math.round(v)))
+  }, [value])
+  return <>{n}</>
+}
 
 const TABS: { id: Tab; icon: typeof Clock3; who: Group[] }[] = [
   { id: 'Summary', icon: LayoutDashboard, who: ['approver', 'admin'] },
@@ -50,6 +79,7 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
   const [toast, setToast] = useState('')
   const [toastError, setToastError] = useState(false)
   const [busy, start] = useTransition()
+  const refreshing = usePending(busy)
 
   const run: Run = (fn, ok) => start(async () => {
     const r = await fn()
@@ -75,7 +105,7 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
           <div className="user-card-top"><span className={`avatar avatar-${tone(profile.full_name.length)}`}>{initials(profile.full_name)}</span><div><strong>{personLabel(profile.full_name) || profile.email}</strong><small>{profile.email}</small></div></div>
           <span className="user-card-role">{TYPE_LABEL[profile.role] ?? profile.role}</span>
         </div>
-        <form action={signOut}><button className="signout">Sign out</button></form>
+        <form action={signOut}><button className="signout"><LogOut aria-hidden="true" /><span>Sign out</span></button></form>
         <p className="privacy-text">Personal data is handled under the Data Privacy Act of 2012 (RA 10173).</p>
       </div>
     </aside>
@@ -97,26 +127,26 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
             <Metric label="Visitor records" value={visitors.length} tone="sand" />
           </section>
           <div className="panel"><div className="panel-heading"><div><h2>Upcoming appointments</h2></div></div>
-            <div className="request-list">{upcoming.length ? upcoming.map((a, i) => <ApptRow key={a.id} a={a} i={i} />) : <p className="empty-copy">Nothing scheduled.</p>}</div></div></>}
+            <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(upcoming.length, 2)} label="Refreshing appointments" /> : upcoming.length ? upcoming.map((a, i) => <ApptRow key={a.id} a={a} i={i} />) : <p className="empty-copy">Nothing scheduled.</p>}</div></div></>}
 
         {tab === 'Appointments' && <div className="panel"><div className="panel-heading"><div><h2>{list.length} {list.length === 1 ? 'request' : 'requests'}</h2></div>
           <div className="filters"><label className="modal-label" htmlFor="f-status">Status</label><select id="f-status" className="modal-input" value={filter} onChange={(e) => setFilter(e.target.value as Status | 'All')}><option>All</option>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div></div>
-          <div className="request-list">{list.length ? list.map((a, i) => <ApptRow key={a.id} a={a} i={i} actions={<>
+          <div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(list.length, 2), 5)} label="Refreshing requests" /> : list.length ? list.map((a, i) => <ApptRow key={a.id} a={a} i={i} actions={<>
             {staff && (group === 'admin' || a.department === profile.department) && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <button className="secondary-button" onClick={() => setModal({ review: a })}>{a.status === 'Pending' ? 'Review' : 'Reschedule'}</button>}
             {(a.requester_id === profile.id || group === 'admin') && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <ConfirmButton label="Cancel" confirmLabel="Confirm cancel" disabled={busy} onConfirm={() => run(() => cancel(a.id), 'Appointment cancelled')} />}</>} />) : <p className="empty-copy">No requests match.</p>}</div></div>}
 
-        {tab === 'Visitors' && <div className="panel"><div className="request-list">{visitors.length ? visitors.map((v) => <div className="request-row" key={v.id}><span className={`avatar avatar-${tone(v.id)}`}>{initials(v.name)}</span><span className="request-person"><strong>{v.name}</strong><span>{v.purpose}{v.appointment_id ? ` · ${code(v.appointment_id)}` : ''}</span></span><span className="request-detail"><strong>{v.department}</strong><span>{v.arrived_at ? `Arrived ${stamp(v.arrived_at)}` : 'Not arrived'}{v.left_at ? ` · Left ${stamp(v.left_at)}` : ''}</span></span><span className="row-actions">{!v.arrived_at && <button className="secondary-button" disabled={busy} onClick={() => run(() => markVisit(v.id, 'arrived_at'), 'Arrival recorded')}>Mark arrived</button>}{v.arrived_at && !v.left_at && <button className="secondary-button" disabled={busy} onClick={() => run(() => markVisit(v.id, 'left_at'), 'Departure recorded')}>Mark left</button>}</span></div>) : <p className="empty-copy">No visitors registered.</p>}</div></div>}
+        {tab === 'Visitors' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(visitors.length, 2), 5)} label="Refreshing visitor records" /> : visitors.length ? visitors.map((v) => <div className="request-row" key={v.id}><span className={`avatar avatar-${tone(v.id)}`}>{initials(v.name)}</span><span className="request-person"><strong>{v.name}</strong><span>{v.purpose}{v.appointment_id ? ` · ${code(v.appointment_id)}` : ''}</span></span><span className="request-detail"><strong>{v.department}</strong><span>{v.arrived_at ? `Arrived ${stamp(v.arrived_at)}` : 'Not arrived'}{v.left_at ? ` · Left ${stamp(v.left_at)}` : ''}</span></span><span className="row-actions">{!v.arrived_at && <button className="secondary-button" disabled={busy} onClick={() => run(() => markVisit(v.id, 'arrived_at'), 'Arrival recorded')}>Mark arrived</button>}{v.arrived_at && !v.left_at && <button className="secondary-button" disabled={busy} onClick={() => run(() => markVisit(v.id, 'left_at'), 'Departure recorded')}>Mark left</button>}</span></div>) : <p className="empty-copy">No visitors registered.</p>}</div></div>}
 
-        {tab === 'Availability' && <Availability profile={profile} avail={avail} depts={depts} run={run} />}
+        {tab === 'Availability' && <Availability profile={profile} avail={avail} depts={depts} run={run} refreshing={refreshing} />}
 
-        {tab === 'Reports' && <div className="panel table-wrap"><table className="table"><thead><tr><th>Office</th>{STATUSES.map((s) => <th key={s}>{s}</th>)}<th>Total</th></tr></thead>
-          <tbody>{depts.map((d) => <tr key={d}><td>{d}</td>{STATUSES.map((s) => <td key={s}>{appts.filter((a) => a.department === d && a.status === s).length}</td>)}<td>{appts.filter((a) => a.department === d).length}</td></tr>)}</tbody></table></div>}
+        {tab === 'Reports' && <div className="panel table-wrap" aria-busy={refreshing}><table className="table"><thead><tr><th>Office</th>{STATUSES.map((s) => <th key={s}>{s}</th>)}<th>Total</th></tr></thead>
+          <tbody>{refreshing ? <SkeletonTableRows rows={Math.min(Math.max(depts.length, 2), 6)} cols={STATUSES.length + 2} /> : depts.map((d) => <tr key={d}><td>{d}</td>{STATUSES.map((s) => <td key={s}>{appts.filter((a) => a.department === d && a.status === s).length}</td>)}<td>{appts.filter((a) => a.department === d).length}</td></tr>)}</tbody></table></div>}
 
-        {tab === 'Offices' && <Offices departments={departments} run={run} busy={busy} />}
+        {tab === 'Offices' && <Offices departments={departments} run={run} busy={busy} refreshing={refreshing} />}
 
-        {tab === 'Email log' && <div className="panel"><div className="request-list">{emails.length ? emails.map((m) => <div className="request-row" key={m.id}><span className="request-person"><strong>{m.appointment_id ? code(m.appointment_id) : 'No reference'}: {m.event}</strong><span>{m.to_email}</span></span><span className="request-detail"><strong>{m.status}</strong><span>{m.detail || stamp(m.created_at)}</span></span></div>) : <p className="empty-copy">No emails yet.</p>}</div></div>}
+        {tab === 'Email log' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={3} label="Refreshing the email log" /> : emails.length ? emails.map((m) => <div className="request-row" key={m.id}><span className="request-person"><strong>{m.appointment_id ? code(m.appointment_id) : 'No reference'}: {m.event}</strong><span>{m.to_email}</span></span><span className="request-detail"><strong>{m.status}</strong><span>{m.detail || stamp(m.created_at)}</span></span></div>) : <p className="empty-copy">No emails yet.</p>}</div></div>}
 
-        {tab === 'Users' && <div className="panel"><div className="request-list">{users.map((u) => <UserRow key={u.id} u={u} self={u.id === profile.id} depts={depts} run={run} busy={busy} />)}</div></div>}
+        {tab === 'Users' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(users.length, 2), 6)} label="Refreshing the user list" /> : users.map((u) => <UserRow key={u.id} u={u} self={u.id === profile.id} depts={depts} run={run} busy={busy} />)}</div></div>}
       </div>
     </main>
 
@@ -128,7 +158,7 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
 }
 
 function Metric({ label, value, tone: t }: { label: string; value: number; tone: string }) {
-  return <div className={`metric-card metric-${t}`}><strong className="metric-value">{value}</strong><span className="metric-label">{label}</span></div>
+  return <div className={`metric-card metric-${t}`}><strong className="metric-value"><CountUp value={value} /></strong><span className="metric-label">{label}</span></div>
 }
 
 function ApptRow({ a, i = 0, actions }: { a: Appt; i?: number; actions?: React.ReactNode }) {
@@ -276,12 +306,12 @@ function VisitorForm({ profile, depts, appts, run, busy }: { profile: Profile; d
     <div className="modal-actions"><button className="primary-button" disabled={!name.trim() || !purpose.trim() || busy} onClick={() => run(() => registerVisitor({ name, purpose, department, appointmentId: apptId ? Number(apptId) : null }), 'Visitor registered')}>Save record</button></div></>
 }
 
-function Availability({ profile, avail, depts, run }: { profile: Profile; avail: Avail[]; depts: string[]; run: Run }) {
+function Availability({ profile, avail, depts, run, refreshing }: { profile: Profile; avail: Avail[]; depts: string[]; run: Run; refreshing: boolean }) {
   const [dept, setDept] = useState(profile.department ?? depts[0])
   const on = new Set(avail.filter((a) => a.department === dept).map((a) => `${a.weekday}-${a.time}`))
   return <div className="panel"><div className="panel-heading"><div><h2>{dept}</h2></div>
     {profile.role === 'admin' && <div className="filters"><label className="modal-label" htmlFor="a-dept">Office</label><select id="a-dept" className="modal-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}</div>
-    <div className="table-wrap"><table className="table"><thead><tr><th>Slot</th>{WEEKDAYS.map((w) => <th key={w.n}>{w.label}</th>)}</tr></thead>
+    <div className="table-wrap" aria-busy={refreshing}><table className="table"><thead><tr><th>Slot</th>{WEEKDAYS.map((w) => <th key={w.n}>{w.label}</th>)}</tr></thead>
       <tbody>{SLOTS.map((t) => <tr key={t}><td>{t}</td>{WEEKDAYS.map((w) => <td key={w.n}><input type="checkbox" aria-label={`${w.label} ${t}`} checked={on.has(`${w.n}-${t}`)} onChange={(e) => run(() => toggleSlot(dept, w.n, t, e.target.checked), 'Availability updated')} /></td>)}</tr>)}</tbody></table></div></div>
 }
 
@@ -296,9 +326,9 @@ function UserRow({ u, self, depts, run, busy }: { u: Profile; self: boolean; dep
     <span className="row-actions">{u.role === 'visitor' && <button className="secondary-button" disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</button>}<button className="secondary-button" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'User updated')}>Save</button></span></div>
 }
 
-function Offices({ departments, run, busy }: { departments: Dept[]; run: Run; busy: boolean }) {
+function Offices({ departments, run, busy, refreshing }: { departments: Dept[]; run: Run; busy: boolean; refreshing: boolean }) {
   const [name, setName] = useState('')
-  return <div className="panel"><div className="request-list">{departments.map((d) => <div className="request-row" key={d.name}><span className="request-person"><strong>{d.name}</strong><span>{d.active ? 'Takes appointments' : 'Not participating'}</span></span><span className="row-actions"><button className="secondary-button" disabled={busy} onClick={() => run(() => saveOffice(d.name, !d.active), d.active ? 'Office deactivated' : 'Office activated')}>{d.active ? 'Deactivate' : 'Activate'}</button></span></div>)}</div>
+  return <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(departments.length, 2), 5)} label="Refreshing offices" /> : departments.map((d) => <div className="request-row" key={d.name}><span className="request-person"><strong>{d.name}</strong><span>{d.active ? 'Takes appointments' : 'Not participating'}</span></span><span className="row-actions"><button className="secondary-button" disabled={busy} onClick={() => run(() => saveOffice(d.name, !d.active), d.active ? 'Office deactivated' : 'Office activated')}>{d.active ? 'Deactivate' : 'Activate'}</button></span></div>)}</div>
     <div className="modal-actions"><label className="modal-label" htmlFor="o-name">New office</label><input id="o-name" className="modal-input" value={name} onChange={(e) => setName(e.target.value)} /><button className="primary-button" disabled={!name.trim() || busy} onClick={() => run(async () => { const r = await saveOffice(name, true); if (!r.error) setName(''); return r }, 'Office added')}>Add office</button></div></div>
 }
 

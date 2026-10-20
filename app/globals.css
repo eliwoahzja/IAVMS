@@ -257,7 +257,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .user-card strong { overflow: hidden; color: #fff; font-size: .8125rem; font-weight: 700; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
 .user-card small { overflow: hidden; color: rgba(255, 255, 255, .6); font-size: .71875rem; text-overflow: ellipsis; white-space: nowrap; }
 .user-card-role { align-self: flex-start; padding: 4px 9px; border: 1px solid rgba(227, 169, 0, .32); border-radius: 20px; color: var(--gold); background: rgba(227, 169, 0, .13); font-size: .71875rem; font-weight: 700; letter-spacing: .01em; }
-.signout { padding: 8px 9px; border: 0; background: transparent; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--green); }
+/* Sign out is a control, not a caption: it sits directly under .user-card and
+   shares that card's 4px gutter and 11-ish radius so the sidebar bottom reads
+   as one stack. 44px tall so it stays a comfortable thumb target in the sheet. */
+.sidebar-bottom form { margin: 0 4px; }
+.signout { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 11px; background: rgba(255, 255, 255, .06); font-size: .8125rem; font-weight: 700; letter-spacing: .01em; color: rgba(255, 255, 255, .86); }
+.signout svg { flex: none; width: 15px; height: 15px; }
 
 .muted-note { margin: 12px 0 0; color: var(--muted-foreground); font-size: 0.75rem; line-height: 1.45; }
 
@@ -270,7 +275,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .nav-item-active, .nav-item-active:hover { color: #fff; background: rgba(255,255,255,.12); box-shadow: inset 3px 0 0 var(--gold); }
 .nav-item b { color: var(--navy); background: var(--gold); }
 .mobile-close { color: #fff; background: transparent; }
-.user-block strong { color: #fff; } .user-block small { color: rgba(255,255,255,.62); } .signout { color: var(--gold); }
+.user-block strong { color: #fff; } .user-block small { color: rgba(255,255,255,.62); }
+/* Gold is this system's state colour (active nav, role pill, badge), so the sign
+   out container stays neutral-white like .user-card and only picks gold up on
+   hover — otherwise three gold boxes stack in the last 120px of the sidebar. */
+.signout:hover { color: #fff; border-color: rgba(227, 169, 0, .55); background: rgba(227, 169, 0, .16); }
 .privacy-text { margin: 4px 9px 10px; color: rgba(255,255,255,.55); font-size: 0.75rem; line-height: 1.45; }
 .primary-button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .sidebar button:focus-visible { outline-color: var(--gold); }
@@ -294,11 +303,43 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .request-row { animation: rise .26s var(--ease) both; animation-delay: calc(var(--i, 0) * 30ms); }
 .modal-backdrop { animation: fade .18s ease-out both; }
 .modal-card, .toast { animation: pop .24s var(--ease) both; }
-.skeleton { height: 46px; border-radius: 9px; background: #dde2f5; animation: pulse 1.1s ease-in-out infinite; }
+.skeleton { display: block; height: 46px; border-radius: 9px; background: #dde2f5; animation: pulse 1.1s ease-in-out infinite; }
+
+/* Skeletons reuse the real row grid and the real card heights, so the swap to
+   live data never shifts anything under the cursor. The sheen is transform-only
+   and clipped by the box, so shimmering costs no layout or outside paint. */
+.skeleton { position: relative; overflow: hidden; }
+.skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .8), transparent); transform: translateX(-100%); animation: sheen 1.3s var(--ease) infinite; }
+@keyframes sheen { to { transform: translateX(100%); } }
+.skeleton-list { display: flex; flex-direction: column; }
+/* 63px, not the 57px row minimum: a real three-line row measures 63, so this is
+   what keeps the list from jumping when the data lands. */
+.skeleton-row { display: grid; grid-template-columns: auto minmax(135px, 1fr) minmax(120px, .75fr) auto; align-items: center; gap: 11px; min-height: 63px; border-top: 1px solid var(--g87); animation: fade .18s ease-out both; }
+.skeleton-row:first-child { border-top: 0; }
+.skeleton-avatar { width: 30px; height: 30px; border-radius: 50%; }
+.skeleton-line { height: 9px; border-radius: 5px; }
+.skeleton-line-short { width: 58%; }
+.skeleton-pill { justify-self: end; width: 76px; height: 22px; border-radius: 20px; }
+.skeleton-cell { width: 64px; height: 9px; }
+.skeleton-table th, .skeleton-table td { border-top: 1px solid var(--line); }
+.skeleton-title { width: 190px; height: 28px; margin-bottom: 12px; border-radius: 8px; }
+.skeleton-intro { width: 300px; max-width: 60%; height: 10px; }
+.skeleton-card { height: 153px; border-radius: 13px; }
+.skeleton-nav { height: 40px; border-radius: 9px; }
+.skeleton-signout { height: 44px; margin: 0 4px; border-radius: 11px; }
+.sidebar .skeleton { background: rgba(255, 255, 255, .12); }
+.sidebar .skeleton::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent); }
+.table-wrap[aria-busy='true'] { opacity: .55; transition: opacity .18s var(--ease); }
+/* Rows were inert on hover, which made every list feel like a screenshot. */
+.request-row { transition: background-color .15s var(--ease); }
+.request-row:hover { background: rgba(7, 9, 95, .04); }
+@media (max-width: 1050px) { .skeleton-row { grid-template-columns: auto minmax(120px, 1fr) auto auto; } }
+@media (max-width: 780px) { .skeleton-card { height: 143px; } }
+@media (max-width: 480px) { .skeleton-row { grid-template-columns: auto minmax(0, 1fr) auto; } .skeleton-line-short { display: none; } }
 .progress { position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 3px; overflow: hidden; background: rgba(7,9,95,.12); }
 .progress::after { content: ''; display: block; width: 38%; height: 100%; background: var(--gold); animation: sweep 1s var(--ease) infinite; }
 .primary-button,.secondary-button, .icon-button, .choice-card, .nav-item, .metric-action, .quick-action, .signout { transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s, transform .12s var(--ease); }
-.primary-button:active:not(:disabled), .secondary-button:active:not(:disabled), .icon-button:active, .choice-card:active:not(:disabled), .nav-item:active { transform: scale(.97); }
+.primary-button:active:not(:disabled), .secondary-button:active:not(:disabled), .icon-button:active, .choice-card:active:not(:disabled), .nav-item:active, .signout:active { transform: scale(.97); }
 .sidebar { transition: transform .24s var(--ease); }
 
 /* Polish: system type, sticky translucent bar, sheet, reduced motion */
@@ -329,10 +370,11 @@ h1, h2 { text-wrap: balance; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .content-wrap > *, .request-row, .modal-card, .toast { animation: fade .2s ease-out both; animation-delay: 0ms; }
+  .content-wrap > *, .request-row, .skeleton-row, .modal-card, .toast { animation: fade .2s ease-out both; animation-delay: 0ms; }
   .spin { animation: none; }
   .modal-scrim { animation: fade .2s ease-out; }
   .skeleton { animation: none; opacity: .6; }
+  .skeleton::after { animation: none; display: none; }
   .progress::after { animation: none; width: 100%; opacity: .7; }
   *, *::before, *::after { transition-duration: .01ms !important; }
 }

@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { Dashboard } from '@/components/dashboard'
+import { DashboardSkeleton } from '@/components/dashboard-skeleton'
 import { rows } from '@/lib/db'
 import { supabase } from '@/lib/supabase/server'
 import type { Appt, Avail, Dept, MailRow, Profile, Visitor } from '@/lib/types'
@@ -8,9 +10,21 @@ export default async function Page() {
   const sb = await supabase()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) redirect('/login')
+
   const { data } = await sb.from('profiles').select('*').eq('id', user.id).single()
   if (!data) redirect('/login')
   const profile = data as Profile
+
+  // Both redirects resolve before this JSX is returned, so nothing has flushed
+  // yet and an unauthorised visit is still a real 307 rather than a client-side
+  // hop. Only the data behind the boundary streams in late.
+  return <Suspense fallback={<DashboardSkeleton profile={profile} />}>
+    <Workspace profile={profile} />
+  </Suspense>
+}
+
+async function Workspace({ profile }: { profile: Profile }) {
+  const sb = await supabase()
   const staff = profile.role === 'admin' || profile.role === 'approver'
   const isAdmin = profile.role === 'admin'
 
