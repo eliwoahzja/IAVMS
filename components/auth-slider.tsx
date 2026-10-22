@@ -9,21 +9,6 @@ export type AuthMode = 'signin' | 'signup'
 
 const URL_FOR: Record<AuthMode, string> = { signin: '/login', signup: '/signup' }
 
-function Showcase() {
-  return (
-    <div className="auth-showcase" aria-hidden="true">
-      <div className="auth-showcase-row">
-        <span className="avatar avatar-sage">SB</span>
-        <div><strong>Santos, Bea</strong><span>Registrar · APT-1043</span></div>
-      </div>
-      <div className="auth-showcase-meta">
-        <span>Oct 23 · 1:00 PM</span>
-        <span className="status-pill status-approved"><span />Approved</span>
-      </div>
-    </div>
-  )
-}
-
 export function AuthSlider({ initialMode, error, msg }: {
   initialMode: AuthMode
   error?: string
@@ -118,7 +103,6 @@ export function AuthSlider({ initialMode, error, msg }: {
             <p className="auth-overlay-kicker">New here</p>
             <h2>Book the office, skip the queue</h2>
             <p>Pick an office, pick a slot, say what it is for. The office approves it.</p>
-            <Showcase />
             <button type="button" className="auth-ghost" onClick={() => go('signup')}>
               Create an account <ArrowRight />
             </button>
@@ -127,7 +111,6 @@ export function AuthSlider({ initialMode, error, msg }: {
             <p className="auth-overlay-kicker">Already registered</p>
             <h2>Sign in and pick up where you left off</h2>
             <p>Your requests, approvals and visitor logs are waiting for you.</p>
-            <Showcase />
             <button type="button" className="auth-ghost" onClick={() => go('signin')}>
               Sign in <ArrowRight />
             </button>
