@@ -11,6 +11,10 @@ export function DashboardSkeleton({ profile, rows = 3 }: { profile: Profile; row
         {Array.from({ length: 8 }, (_, i) => <span className="skeleton skeleton-nav" key={i} />)}
       </nav>
       <div className="sidebar-bottom">
+        <div className="user-card">
+          <div className="user-card-top"><span className={`avatar avatar-${tone(profile.full_name.length)}`}>{profile.full_name.trim() ? initials(profile.full_name) : profile.email.slice(0, 1).toUpperCase()}</span><div><strong>{personLabel(profile.full_name) || profile.email}</strong>{personLabel(profile.full_name) ? <small>{profile.email}</small> : null}</div></div>
+          <span className="user-card-role">{TYPE_LABEL[profile.role] ?? profile.role}</span>
+        </div>
         <span className="skeleton skeleton-signout" aria-hidden="true" />
       </div>
     </aside>

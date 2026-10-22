@@ -170,6 +170,10 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
         {tabs.map(({ id, icon: Icon }) => <button key={id} type="button" className={`nav-item ${tab === id ? 'nav-item-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setMenuOpen(false) }}><Icon /><span>{id}</span>{id === 'Appointments' && staff && count('Pending') > 0 && <b>{count('Pending')}</b>}</button>)}
       </nav>
       <div className="sidebar-bottom">
+        <div className="user-card">
+          <div className="user-card-top"><span className={`avatar avatar-${tone(profile.full_name.length)}`}>{avatarText}</span><div><strong>{name || profile.email}</strong>{name ? <small>{profile.email}</small> : null}</div></div>
+          <span className="user-card-role">{TYPE_LABEL[profile.role] ?? profile.role}</span>
+        </div>
         <form action={signOut}><button className="signout"><LogOut aria-hidden="true" /><span>Sign out</span></button></form>
         <p className="privacy-text">Personal data is handled under the Data Privacy Act of 2012 (RA 10173).</p>
       </div>
