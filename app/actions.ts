@@ -179,7 +179,7 @@ export async function blockSlot(department: string, date: string, time: string |
   if (!reason) return { error: 'Say why the office is unavailable.' }
   if (reason.length > 60) return { error: 'Keep the reason under 60 characters.' }
   const { error } = await admin().from('blocked_slots').insert({ department, date, time, reason, created_by: p.id })
-  if (error) return { error: error.code === '23505' ? 'That time is already blocked.' : 'Could not block that time.' }
+  if (error) return { error: error.code === '23505' ? 'That time is already unavailable.' : 'Could not mark that time as unavailable.' }
   revalidatePath('/')
   return {}
 }

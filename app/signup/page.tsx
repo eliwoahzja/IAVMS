@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { AuthBrand } from '@/components/auth-bits'
-import { AuthForm } from '@/components/auth-form'
+import { AuthSlider } from '@/components/auth-slider'
 import { supabase } from '@/lib/supabase/server'
 
 export default async function Signup({ searchParams }: { searchParams: Promise<{ error?: string; msg?: string }> }) {
@@ -10,10 +10,10 @@ export default async function Signup({ searchParams }: { searchParams: Promise<{
   const { error, msg } = await searchParams
 
   return (
-    <main className="auth-page" id="content">
+    <main className="auth-page">
       <div className="auth-shell">
         <AuthBrand />
-        <AuthForm mode="signup" error={error} msg={msg} />
+        <AuthSlider initialMode="signup" error={error} msg={msg} />
       </div>
     </main>
   )
