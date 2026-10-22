@@ -72,7 +72,7 @@ create policy "staff" on public.visitors for select using (public.my_role() = 'a
 create policy "signed in" on public.availability for select using (auth.uid() is not null);
 create policy "admin" on public.email_log for select using (public.my_role() = 'admin');
 
-insert into public.departments (name) values ('Admission'), ('Records and Credentials'), ('Guidance and Counseling'), ('Student Services and Affairs'), ('College of IT'), ('Principal''s Office');
+insert into public.departments (name) values ('Admission'), ('Registrar''s Office'), ('Accounting Office'), ('Guidance and Counseling'), ('Student Services and Affairs'), ('College of IT'), ('Principal''s Office');
 
 insert into public.availability
 select d.name, w, t from public.departments d, generate_series(1,5) as w,
