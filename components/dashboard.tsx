@@ -2,12 +2,12 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { CalendarDays, Check, ClipboardCheck, Clock3, FileText, Grid2X2, LayoutDashboard, LogOut, Menu, Plus, Search, Settings, UsersRound, X } from 'lucide-react'
-import { book, cancel, decide, markVisit, registerVisitor, saveOffice, setAuthorized, setUserRole, signOut, slotStates, toggleSlot } from '@/app/actions'
+import { blockSlot, book, cancel, decide, markVisit, registerVisitor, saveOffice, setAuthorized, setUserRole, signOut, slotStates, toggleSlot, unblockSlot } from '@/app/actions'
 import { DatePicker } from '@/components/date-picker'
 import { SkeletonRows, SkeletonTableRows } from '@/components/skeleton'
-import { GENDER_LABEL, ROLES, SLOTS, STATUSES, TYPE_LABEL, WEEKDAYS, code, day, initials, personLabel, tone } from '@/lib/constants'
+import { ROLES, SLOTS, STATUSES, TYPE_LABEL, WEEKDAYS, bySchedule, code, day, initials, personLabel, tone } from '@/lib/constants'
 import { project, rubberband, springTo } from '@/lib/spring'
-import type { Appt, Avail, Dept, MailRow, Profile, R, Role, SlotInfo, Status, Visitor } from '@/lib/types'
+import type { Appt, Avail, Block, Dept, MailRow, Profile, R, Role, SlotInfo, Status, Visitor } from '@/lib/types'
 
 type Tab = 'Summary' | 'Appointments' | 'Visitors' | 'Availability' | 'Reports' | 'Offices' | 'Email log' | 'Users'
 type Group = 'requester' | 'approver' | 'admin'
@@ -60,9 +60,9 @@ const INTRO: Record<Tab, string> = {
 
 const stamp = (iso: string) => new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })
 
-type Props = { profile: Profile; appts: Appt[]; visitors: Visitor[]; avail: Avail[]; users: Profile[]; emails: MailRow[]; departments: Dept[]; today: string }
+type Props = { profile: Profile; appts: Appt[]; visitors: Visitor[]; avail: Avail[]; blocks: Block[]; users: Profile[]; emails: MailRow[]; departments: Dept[]; today: string }
 
-export function Dashboard({ profile, appts, visitors, avail, users, emails, departments, today }: Props) {
+export function Dashboard({ profile, appts, visitors, avail, blocks, users, emails, departments, today }: Props) {
   const group: Group = profile.role === 'admin' ? 'admin' : profile.role === 'approver' ? 'approver' : 'requester'
   const staff = group !== 'requester'
   const depts = departments.filter((d) => d.active).map((d) => d.name)
@@ -76,6 +76,43 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
   const [toastError, setToastError] = useState(false)
   const [busy, start] = useTransition()
   const refreshing = usePending(busy)
+  const [isMobile, setIsMobile] = useState(false)
+  const menuButton = useRef<HTMLButtonElement>(null)
+  const closeButton = useRef<HTMLButtonElement>(null)
+  const sidebar = useRef<HTMLElement>(null)
+  const name = personLabel(profile.full_name)
+  const avatarText = profile.full_name.trim() ? initials(profile.full_name) : profile.email.slice(0, 1).toUpperCase()
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 780px)')
+    const sync = () => { setIsMobile(mq.matches); if (!mq.matches) setMenuOpen(false) }
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    closeButton.current?.focus({ preventScroll: true })
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setMenuOpen(false); return }
+      if (e.key !== 'Tab' || !sidebar.current) return
+      const f = Array.from(sidebar.current.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]'))
+      if (!f.length) return
+      const first = f[0]
+      const last = f[f.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    window.addEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('keydown', key)
+      document.body.style.overflow = previous
+      menuButton.current?.focus({ preventScroll: true })
+    }
+  }, [menuOpen])
 
   const run: Run = (fn, ok) => start(async () => {
     const r = await fn()
@@ -85,20 +122,23 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
     window.setTimeout(() => setToast(''), 3500)
   })
 
-  const count = (s: Status) => appts.filter((a) => a.status === s).length
-  const list = useMemo(() => appts.filter((a) => (filter === 'All' || a.status === filter) && `${a.requester_name} ${a.department} ${code(a.id)}`.toLowerCase().includes(search.toLowerCase())), [appts, filter, search])
-  const upcoming = appts.filter((a) => (a.status === 'Approved' || a.status === 'Rescheduled') && a.date >= today).slice(0, 6)
+  const ordered = useMemo(() => [...appts].sort(bySchedule), [appts])
+  const count = (s: Status) => ordered.filter((a) => a.status === s).length
+  const list = useMemo(() => ordered.filter((a) => (filter === 'All' || a.status === filter) && `${a.requester_name} ${a.department} ${code(a.id)}`.toLowerCase().includes(search.toLowerCase())), [ordered, filter, search])
+  const upcoming = ordered.filter((a) => (a.status === 'Approved' || a.status === 'Rescheduled') && a.date >= today).slice(0, 6)
 
   return <div className="app-shell">
+    <a className="skip-link" href="#content">Skip to content</a>
     {busy && <div className="progress" role="progressbar" aria-label="Saving" />}
-    <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
-      <div className="brand-lockup"><img className="brand-seal" src="/seal.png" alt="" width={38} height={38} /><div><p className="brand-name">SPCC</p><p className="brand-subtitle">Caloocan campus</p></div><button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close navigation"><X /></button></div>
+    {menuOpen && <div className="sidebar-scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
+    <aside ref={sidebar} id="app-sidebar" inert={isMobile && !menuOpen} className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
+      <div className="brand-lockup"><img className="brand-seal" src="/seal.png" alt="" width={38} height={38} /><div><p className="brand-name">SPCC</p><p className="brand-subtitle">Caloocan campus</p></div><button ref={closeButton} className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close navigation"><X /></button></div>
       <nav className="main-nav" aria-label="Main navigation">
         {tabs.map(({ id, icon: Icon }) => <button key={id} type="button" className={`nav-item ${tab === id ? 'nav-item-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setMenuOpen(false) }}><Icon /><span>{id}</span>{id === 'Appointments' && staff && count('Pending') > 0 && <b>{count('Pending')}</b>}</button>)}
       </nav>
       <div className="sidebar-bottom">
         <div className="user-card">
-          <div className="user-card-top"><span className={`avatar avatar-${tone(profile.full_name.length)}`}>{initials(profile.full_name)}</span><div><strong>{personLabel(profile.full_name) || profile.email}</strong><small>{profile.email}</small></div></div>
+          <div className="user-card-top"><span className={`avatar avatar-${tone(profile.full_name.length)}`}>{avatarText}</span><div><strong>{name || profile.email}</strong>{name ? <small>{profile.email}</small> : null}</div></div>
           <span className="user-card-role">{TYPE_LABEL[profile.role] ?? profile.role}</span>
         </div>
         <form action={signOut}><button className="signout"><LogOut aria-hidden="true" /><span>Sign out</span></button></form>
@@ -106,8 +146,8 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
       </div>
     </aside>
 
-    <main className="main-content">
-      <header className="topbar"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Menu /></button><div className="breadcrumb"><span>Workspace</span><span>/</span><strong>{tab}</strong></div>
+    <main className="main-content" id="content" inert={isMobile && menuOpen}>
+      <header className="topbar"><button ref={menuButton} className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="app-sidebar"><Menu /></button><div className="breadcrumb"><span>Workspace</span><span>/</span><strong>{tab}</strong></div>
         {tab === 'Appointments' && <div className="topbar-actions"><div className="search-wrap"><Search /><input aria-label="Search appointments" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search requests" /></div></div>}</header>
       <div className="content-wrap">
         <section className="page-intro"><div><h1>{tab}</h1><p className="intro-copy">{tab === 'Appointments' && !staff ? 'Your requests and their status.' : INTRO[tab]}</p></div>
@@ -119,7 +159,7 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
           <section className="metric-grid">
             <Metric label="Pending review" value={count('Pending')} tone="coral" />
             <Metric label="Approved" value={count('Approved') + count('Rescheduled')} tone="sage" />
-            <Metric label="All requests" value={appts.length} tone="lavender" />
+            <Metric label="All requests" value={ordered.length} tone="lavender" />
             <Metric label="Visitor records" value={visitors.length} tone="sand" />
           </section>
           <div className="panel"><div className="panel-heading"><div><h2>Upcoming appointments</h2></div></div>
@@ -133,10 +173,10 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
 
         {tab === 'Visitors' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(visitors.length, 2), 5)} label="Refreshing visitor records" /> : visitors.length ? visitors.map((v) => <div className="request-row" key={v.id}><span className={`avatar avatar-${tone(v.id)}`}>{initials(v.name)}</span><span className="request-person"><strong>{v.name}</strong><span>{v.purpose}{v.appointment_id ? ` · ${code(v.appointment_id)}` : ''}</span></span><span className="request-detail"><strong>{v.department}</strong><span>{v.arrived_at ? `Arrived ${stamp(v.arrived_at)}` : 'Not arrived'}{v.left_at ? ` · Left ${stamp(v.left_at)}` : ''}</span></span><span className="row-actions">{!v.arrived_at && <button className="secondary-button" disabled={busy} onClick={() => run(() => markVisit(v.id, 'arrived_at'), 'Arrival recorded')}>Mark arrived</button>}{v.arrived_at && !v.left_at && <button className="secondary-button" disabled={busy} onClick={() => run(() => markVisit(v.id, 'left_at'), 'Departure recorded')}>Mark left</button>}</span></div>) : <p className="empty-copy">No visitors registered.</p>}</div></div>}
 
-        {tab === 'Availability' && <Availability profile={profile} avail={avail} depts={depts} run={run} refreshing={refreshing} />}
+        {tab === 'Availability' && <Availability profile={profile} avail={avail} blocks={blocks} depts={depts} today={today} run={run} busy={busy} refreshing={refreshing} />}
 
         {tab === 'Reports' && <div className="panel table-wrap" aria-busy={refreshing}><table className="table"><thead><tr><th>Office</th>{STATUSES.map((s) => <th key={s}>{s}</th>)}<th>Total</th></tr></thead>
-          <tbody>{refreshing ? <SkeletonTableRows rows={Math.min(Math.max(depts.length, 2), 6)} cols={STATUSES.length + 2} /> : depts.map((d) => <tr key={d}><td>{d}</td>{STATUSES.map((s) => <td key={s}>{appts.filter((a) => a.department === d && a.status === s).length}</td>)}<td>{appts.filter((a) => a.department === d).length}</td></tr>)}</tbody></table></div>}
+          <tbody>{refreshing ? <SkeletonTableRows rows={Math.min(Math.max(depts.length, 2), 6)} cols={STATUSES.length + 2} /> : depts.map((d) => <tr key={d}><td>{d}</td>{STATUSES.map((s) => <td key={s}>{ordered.filter((a) => a.department === d && a.status === s).length}</td>)}<td>{ordered.filter((a) => a.department === d).length}</td></tr>)}</tbody></table></div>}
 
         {tab === 'Offices' && <Offices departments={departments} run={run} busy={busy} refreshing={refreshing} />}
 
@@ -148,7 +188,7 @@ export function Dashboard({ profile, appts, visitors, avail, users, emails, depa
 
     {typeof modal === 'object' && modal && <ModalBox title={`Review ${code(modal.review.id)}`} onClose={() => setModal(null)}><Review a={modal.review} today={today} run={run} busy={busy} /></ModalBox>}
     {modal === 'book' && <ModalBox title="New appointment" onClose={() => setModal(null)}><Wizard today={today} depts={depts} own={profile.role === 'approver' ? profile.department : null} run={run} busy={busy} /></ModalBox>}
-    {modal === 'visitor' && <ModalBox title="Register a visitor" onClose={() => setModal(null)}><VisitorForm profile={profile} depts={depts} appts={appts} run={run} busy={busy} /></ModalBox>}
+    {modal === 'visitor' && <ModalBox title="Register a visitor" onClose={() => setModal(null)}><VisitorForm profile={profile} depts={depts} appts={ordered} run={run} busy={busy} /></ModalBox>}
     {toast && <div className={`toast ${toastError ? 'toast-error' : ''}`} role={toastError ? 'alert' : 'status'}>{toastError ? <X /> : <Check />} {toast}</div>}
   </div>
 }
@@ -159,7 +199,7 @@ function Metric({ label, value, tone: t }: { label: string; value: number; tone:
 
 function ApptRow({ a, i = 0, actions }: { a: Appt; i?: number; actions?: React.ReactNode }) {
   return <div className="request-row" style={{ '--i': Math.min(i, 8) } as React.CSSProperties}><span className={`avatar avatar-${tone(a.id)}`}>{initials(a.requester_name)}</span>
-    <span className="request-person"><strong>{a.requester_name}</strong><span>{TYPE_LABEL[a.requester_type] ?? a.requester_type} · {code(a.id)}</span></span>
+    <span className="request-person"><strong>{a.requester_name}</strong><span>{TYPE_LABEL[a.requester_type] ?? a.requester_type} · {code(a.id)}</span><span className="request-meta">{day(a.date)} · {a.time} · {a.department}</span></span>
     <span className="request-detail"><strong>{a.department}</strong><span>{day(a.date)} · {a.time}</span><span>{a.purpose}</span></span>
     <span className={`status-pill status-${a.status.toLowerCase()}`}><span />{a.status}</span>
     {actions && <span className="row-actions">{actions}</span>}</div>
@@ -300,30 +340,81 @@ function VisitorForm({ profile, depts, appts, run, busy }: { profile: Profile; d
     <div className="form-actions"><button className="primary-button" disabled={!name.trim() || !purpose.trim() || busy} onClick={() => run(() => registerVisitor({ name, purpose, department, appointmentId: apptId ? Number(apptId) : null }), 'Visitor registered')}>Save record</button></div></>
 }
 
-function Availability({ profile, avail, depts, run, refreshing }: { profile: Profile; avail: Avail[]; depts: string[]; run: Run; refreshing: boolean }) {
+function Availability({ profile, avail, blocks, depts, today, run, busy, refreshing }: { profile: Profile; avail: Avail[]; blocks: Block[]; depts: string[]; today: string; run: Run; busy: boolean; refreshing: boolean }) {
   const [dept, setDept] = useState(profile.department ?? depts[0])
+  const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
+  const [reason, setReason] = useState('')
   const on = new Set(avail.filter((a) => a.department === dept).map((a) => `${a.weekday}-${a.time}`))
-  return <div className="panel"><div className="panel-heading"><div><h2>{dept}</h2></div>
-    {profile.role === 'admin' && <div className="filters"><label className="field-label" htmlFor="a-dept">Office</label><select id="a-dept" className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}</div>
+  const blocked = blocks.filter((b) => b.department === dept)
+  const add = () => run(async () => {
+    const r = await blockSlot(dept, date, time || null, reason)
+    if (!r.error) { setDate(''); setTime(''); setReason('') }
+    return r
+  }, 'Time blocked')
+  return <div className="panel">
+    <div className="panel-heading"><div><h2>{dept}</h2><p className="panel-sub">Weekly hours</p></div>
+      {profile.role === 'admin' && <div className="filters"><label className="field-label" htmlFor="a-dept">Office</label><select id="a-dept" className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}</div>
     <div className="table-wrap" aria-busy={refreshing}><table className="table"><thead><tr><th>Slot</th>{WEEKDAYS.map((w) => <th key={w.n}>{w.label}</th>)}</tr></thead>
-      <tbody>{SLOTS.map((t) => <tr key={t}><td>{t}</td>{WEEKDAYS.map((w) => <td key={w.n}><input type="checkbox" aria-label={`${w.label} ${t}`} checked={on.has(`${w.n}-${t}`)} onChange={(e) => run(() => toggleSlot(dept, w.n, t, e.target.checked), 'Availability updated')} /></td>)}</tr>)}</tbody></table></div></div>
+      <tbody>{SLOTS.map((t) => <tr key={t}><td>{t}</td>{WEEKDAYS.map((w) => <td key={w.n}><input type="checkbox" aria-label={`${w.label} ${t}`} checked={on.has(`${w.n}-${t}`)} onChange={(e) => run(() => toggleSlot(dept, w.n, t, e.target.checked), 'Availability updated')} /></td>)}</tr>)}</tbody></table></div>
+
+    <div className="block-section">
+      <h3>Not available</h3>
+      <p className="muted-note">Close a whole day for a holiday, or a single slot for a meeting. Blocked times cannot be requested.</p>
+      <div className="block-form">
+        <DatePicker id="block-date" label="Date" value={date} min={today} onChange={setDate} />
+        <div>
+          <label className="field-label" htmlFor="block-time">Time</label>
+          <select id="block-time" className="field-input" value={time} onChange={(e) => setTime(e.target.value)}>
+            <option value="">Whole day</option>
+            {SLOTS.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="block-reason-field">
+          <label className="field-label" htmlFor="block-reason">Reason</label>
+          <input id="block-reason" className="field-input" maxLength={60} placeholder="Holiday, meeting, busy" value={reason} onChange={(e) => setReason(e.target.value)} />
+        </div>
+        <button className="primary-button block-add" disabled={!date || !reason.trim() || busy} onClick={add}>Block</button>
+      </div>
+      {blocked.length ? <ul className="block-list">{blocked.map((b) => <li className="block-row" key={b.id}>
+        <span className="block-when"><strong>{day(b.date)}</strong><span>{b.time ?? 'Whole day'}</span></span>
+        <span className="block-reason">{b.reason}</span>
+        <button className="secondary-button" disabled={busy} onClick={() => run(() => unblockSlot(b.id), 'Time opened')}>Remove</button>
+      </li>)}</ul> : <p className="empty-copy">Nothing blocked.</p>}
+    </div>
+  </div>
 }
 
 function UserRow({ u, self, depts, run, busy }: { u: Profile; self: boolean; depts: string[]; run: Run; busy: boolean }) {
   const [role, setRole] = useState<Role>(u.role)
   const [dept, setDept] = useState(u.department ?? depts[0])
   const changed = role !== u.role || (role === 'approver' && dept !== u.department)
-  return <div className="request-row"><span className={`avatar avatar-${tone(u.full_name.length)}`}>{initials(u.full_name)}</span>
-    <span className="request-person"><strong>{u.full_name || 'No name'}</strong><span>{u.email}{u.gender ? ` · ${GENDER_LABEL[u.gender]}` : ''}</span></span>
-    <span className="request-detail"><select aria-label={`Role for ${u.email}`} className="field-input" value={role} disabled={self} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
+  return <div className="request-row"><span className={`avatar avatar-${tone(u.full_name.length)}`}>{u.full_name.trim() ? initials(u.full_name) : u.email.slice(0, 1).toUpperCase()}</span>
+    <span className="request-person"><strong>{u.full_name || 'No name'}</strong><span>{u.email}</span></span>
+    <span className="request-detail user-detail"><select aria-label={`Role for ${u.email}`} className="field-input" value={role} disabled={self} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
       {role === 'approver' && <select aria-label={`Office for ${u.email}`} className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>}</span>
     <span className="row-actions">{u.role === 'visitor' && <button className="secondary-button" disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</button>}<button className="secondary-button" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'User updated')}>Save</button></span></div>
 }
 
 function Offices({ departments, run, busy, refreshing }: { departments: Dept[]; run: Run; busy: boolean; refreshing: boolean }) {
   const [name, setName] = useState('')
-  return <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(departments.length, 2), 5)} label="Refreshing offices" /> : departments.map((d) => <div className="request-row" key={d.name}><span className="request-person"><strong>{d.name}</strong><span>{d.active ? 'Takes appointments' : 'Not participating'}</span></span><span className="row-actions"><button className="secondary-button" disabled={busy} onClick={() => run(() => saveOffice(d.name, !d.active), d.active ? 'Office deactivated' : 'Office activated')}>{d.active ? 'Deactivate' : 'Activate'}</button></span></div>)}</div>
-    <div className="form-actions"><label className="field-label" htmlFor="o-name">New office</label><input id="o-name" className="field-input" value={name} onChange={(e) => setName(e.target.value)} /><button className="primary-button" disabled={!name.trim() || busy} onClick={() => run(async () => { const r = await saveOffice(name, true); if (!r.error) setName(''); return r }, 'Office added')}>Add office</button></div></div>
+  const open = departments.filter((d) => d.active).length
+  const add = () => run(async () => { const r = await saveOffice(name, true); if (!r.error) setName(''); return r }, 'Office added')
+  return <div className="panel">
+    <div className="panel-heading"><div><h2>{departments.length} {departments.length === 1 ? 'office' : 'offices'}</h2><p className="panel-sub">{open} taking appointments</p></div></div>
+    {refreshing ? <SkeletonRows rows={Math.min(Math.max(departments.length, 2), 5)} label="Refreshing offices" /> : <ul className="office-list">{departments.map((d) => <li className={`office-row ${d.active ? '' : 'office-row-off'}`} key={d.name}>
+      <span className="office-name"><strong>{d.name}</strong><span className={`office-state ${d.active ? 'office-state-on' : ''}`}><i />{d.active ? 'Taking appointments' : 'Not taking appointments'}</span></span>
+      <button className="secondary-button office-toggle" disabled={busy} onClick={() => run(() => saveOffice(d.name, !d.active), d.active ? 'Office deactivated' : 'Office activated')}>{d.active ? 'Deactivate' : 'Activate'}</button>
+    </li>)}</ul>}
+    <div className="office-add">
+      <label className="field-label" htmlFor="o-name">Add an office</label>
+      <div className="office-add-row">
+        <input id="o-name" className="field-input" placeholder="Office name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && name.trim() && !busy) add() }} />
+        <button className="primary-button" disabled={!name.trim() || busy} onClick={add}>Add office</button>
+      </div>
+      <p className="muted-note">A new office starts with the standard 9:00 AM to 3:00 PM slots, Monday to Friday.</p>
+    </div>
+  </div>
 }
 
 function ConfirmButton({ label, confirmLabel, disabled, onConfirm }: { label: string; confirmLabel: string; disabled: boolean; onConfirm: () => void }) {

@@ -17,3 +17,4 @@ next-env.d.ts
 skills/*
 !skills/README.md
 .capture/
+artifacts/

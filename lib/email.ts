@@ -8,6 +8,7 @@ async function send(to: string, subject: string, text: string) {
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: process.env.EMAIL_FROM ?? 'SPCC Appointments <onboarding@resend.dev>', to: [to], subject, text }),
     })
@@ -18,7 +19,8 @@ async function send(to: string, subject: string, text: string) {
 }
 
 async function log(a: Mailable, to: string, event: string, r: { status: string; detail: string }) {
-  await admin().from('email_log').insert({ appointment_id: a.id, to_email: to, event, status: r.status, detail: r.detail })
+  const { error } = await admin().from('email_log').insert({ appointment_id: a.id, to_email: to, event, status: r.status, detail: r.detail })
+  if (error) console.error('email log failed:', error.message)
 }
 
 export async function notify(a: Mailable, event: string) {

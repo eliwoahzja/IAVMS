@@ -1,10 +1,10 @@
 export type Role = 'student' | 'faculty' | 'visitor' | 'approver' | 'admin'
-export type Gender = 'male' | 'female'
 export type Status = 'Pending' | 'Approved' | 'Rescheduled' | 'Rejected' | 'Cancelled'
-export type Profile = { id: string; full_name: string; email: string; role: Role; department: string | null; authorized: boolean; gender?: Gender | null }
+export type Profile = { id: string; full_name: string; email: string; role: Role; department: string | null; authorized: boolean }
 export type Appt = { id: number; requester_id: string; requester_name: string; requester_email: string; requester_type: string; department: string; date: string; time: string; purpose: string; status: Status }
 export type Visitor = { id: number; name: string; purpose: string; department: string; appointment_id: number | null; arrived_at: string | null; left_at: string | null; created_at: string }
 export type Avail = { department: string; weekday: number; time: string }
+export type Block = { id: number; department: string; date: string; time: string | null; reason: string }
 export type MailRow = { id: number; appointment_id: number | null; to_email: string; event: string; status: string; detail: string | null; created_at: string }
 export type SlotInfo = { time: string; state: 'open' | 'held' | 'booked' | 'closed' }
 export type R = { error?: string }
