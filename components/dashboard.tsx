@@ -73,14 +73,25 @@ const TABS: { id: Tab; icon: typeof Clock3; who: Group[] }[] = [
   { id: 'Users', icon: Settings, who: ['admin'] },
 ]
 const INTRO: Record<Tab, string> = {
-  Summary: 'Counts by status and the next scheduled appointments.',
-  Appointments: 'Requests for your office and your own bookings.',
-  Visitors: 'Visitor records for your office. Campus security controls entry.',
-  Availability: 'Tick the slots this office accepts, Monday to Friday.',
-  Reports: 'Requests by office and status.',
-  Offices: 'Turn offices on or off for booking, or add a new one.',
-  'Email log': 'Emails sent for appointment changes.',
-  Users: 'Set roles, assign approvers to offices and authorize visitors.',
+  Summary: 'Review pending decisions, confirmed appointments and visitor activity.',
+  Appointments: 'Review appointment requests and their current status.',
+  Visitors: 'Record arrivals and departures. Campus security authorizes entry.',
+  Availability: 'Set the times each office accepts appointments, Monday to Friday.',
+  Reports: 'Appointment totals by office and decision.',
+  Offices: 'Manage the offices that accept appointment requests.',
+  'Email log': 'Check whether appointment emails were accepted, skipped or failed.',
+  Users: 'Assign account roles, choose department approvers and manage visitor access.',
+}
+
+const TAB_TITLE: Record<Tab, string> = {
+  Summary: 'Overview',
+  Appointments: 'Appointments',
+  Visitors: 'Visitor records',
+  Availability: 'Office hours',
+  Reports: 'Reports',
+  Offices: 'Offices',
+  'Email log': 'Email delivery',
+  Users: 'Users',
 }
 
 const stamp = (iso: string) => new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })
@@ -167,7 +178,7 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
     <aside ref={sidebar} id="app-sidebar" inert={isMobile && !menuOpen} className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
       <div className="brand-lockup"><img className="brand-seal" src="/seal.png" alt="" width={38} height={38} /><div><p className="brand-name">SPCC</p><p className="brand-subtitle">Caloocan campus</p></div><button ref={closeButton} className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close navigation"><X /></button></div>
       <nav className="main-nav" aria-label="Main navigation">
-        {tabs.map(({ id, icon: Icon }) => <button key={id} type="button" className={`nav-item ${tab === id ? 'nav-item-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setMenuOpen(false) }}><Icon /><span>{id}</span>{id === 'Appointments' && staff && count('Pending') > 0 && <b>{count('Pending')}</b>}</button>)}
+        {tabs.map(({ id, icon: Icon }) => <button key={id} type="button" className={`nav-item ${tab === id ? 'nav-item-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setMenuOpen(false) }}><Icon /><span>{id === 'Appointments' && group === 'requester' ? 'My appointments' : TAB_TITLE[id]}</span>{id === 'Appointments' && staff && count('Pending') > 0 && <b>{count('Pending')}</b>}</button>)}
       </nav>
       <div className="sidebar-bottom">
         <div className="user-card">
@@ -180,10 +191,10 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
     </aside>
 
     <main className="main-content" id="content" inert={isMobile && menuOpen}>
-      <header className="topbar"><button ref={menuButton} className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="app-sidebar"><Menu /></button><div className="breadcrumb"><span>Workspace</span><span>/</span><strong>{tab}</strong></div>
+      <header className="topbar"><button ref={menuButton} className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation" aria-expanded={menuOpen} aria-controls="app-sidebar"><Menu /></button><div className="breadcrumb"><span>Workspace</span><span>/</span><strong>{tab === 'Appointments' && group === 'requester' ? 'My appointments' : TAB_TITLE[tab]}</strong></div>
         {tab === 'Appointments' && <div className="topbar-actions"><div className="search-wrap"><Search /><input aria-label="Search appointments" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search requests" /></div></div>}</header>
       <div className="content-wrap">
-        <section className="page-intro"><div><h1>{tab}</h1><p className="intro-copy">{tab === 'Appointments' && !staff ? 'Your requests and their status.' : INTRO[tab]}</p></div>
+        <section className="page-intro"><div><h1>{tab === 'Appointments' && !staff ? 'My appointments' : TAB_TITLE[tab]}</h1><p className="intro-copy">{tab === 'Appointments' && !staff ? 'Follow your requests and check whether an office has approved them.' : INTRO[tab]}</p></div>
           {profile.role !== 'admin' && tab === 'Appointments' && <button className="primary-button" disabled={!profile.authorized} onClick={() => setModal('book')}><Plus /> New appointment</button>}
           {staff && tab === 'Visitors' && <button className="primary-button" onClick={() => setModal('visitor')}><Plus /> Register visitor</button>}</section>
 
@@ -196,15 +207,15 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
             <Metric label="Visitor records" value={visitors.length} tone="sand" />
           </section>
           <div className="panel"><div className="panel-heading"><div><h2>Upcoming appointments</h2></div></div>
-            <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(upcoming.length, 2)} label="Refreshing appointments" /> : upcoming.length ? upcoming.map((a, i) => <ApptRow key={a.id} a={a} i={i} />) : <p className="empty-copy">Nothing scheduled.</p>}</div></div></>}
+            <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(upcoming.length, 2)} label="Refreshing appointments" /> : upcoming.length ? upcoming.map((a, i) => <ApptRow key={a.id} a={a} i={i} />) : <p className="empty-copy">No upcoming approved appointments. New approvals will appear here.</p>}</div></div></>}
 
         {tab === 'Appointments' && <div className="panel"><div className="panel-heading"><div><h2>{list.length} {list.length === 1 ? 'request' : 'requests'}</h2></div>
           <div className="filters"><label className="field-label" htmlFor="f-status">Status</label><select id="f-status" className="field-input" value={filter} onChange={(e) => setFilter(e.target.value as Status | 'All')}><option>All</option>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div></div>
           <div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(list.length, 2), 5)} label="Refreshing requests" /> : list.length ? list.map((a, i) => <ApptRow key={a.id} a={a} i={i} actions={<>
             {staff && (group === 'admin' || a.department === profile.department) && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <button className="secondary-button" onClick={() => setModal({ review: a })}>{a.status === 'Pending' ? 'Review' : 'Reschedule'}</button>}
-            {(a.requester_id === profile.id || group === 'admin') && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <ConfirmButton label="Cancel" confirmLabel="Confirm cancel" disabled={busy} onConfirm={() => run(() => cancel(a.id), 'Appointment cancelled')} />}</>} />) : <p className="empty-copy">No requests match.</p>}</div></div>}
+            {(a.requester_id === profile.id || group === 'admin') && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <ConfirmButton label="Cancel" confirmLabel="Confirm cancel" disabled={busy} onConfirm={() => run(() => cancel(a.id), 'Appointment cancelled')} />}</>} />) : <p className="empty-copy">No appointments match your search or selected status.</p>}</div></div>}
 
-        {tab === 'Visitors' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(visitors.length, 2), 5)} label="Refreshing visitor records" /> : visitors.length ? visitors.map((v) => <div className="request-row" key={v.id}><span className={`avatar avatar-${tone(v.id)}`}>{initials(v.name)}</span><span className="request-person"><strong>{v.name}</strong><span>{v.purpose}{v.appointment_id ? ` · ${code(v.appointment_id)}` : ''}</span></span><span className="request-detail"><strong>{v.department}</strong><span>{v.arrived_at ? `Arrived ${stamp(v.arrived_at)}` : 'Not arrived'}{v.left_at ? ` · Left ${stamp(v.left_at)}` : ''}</span></span><span className="row-actions">{!v.arrived_at && <BusyButton label="Mark arrived" disabled={busy} onClick={() => run(() => markVisit(v.id, 'arrived_at'), 'Arrival recorded')}>Mark arrived</BusyButton>}{v.arrived_at && !v.left_at && <BusyButton label="Mark left" disabled={busy} onClick={() => run(() => markVisit(v.id, 'left_at'), 'Departure recorded')}>Mark left</BusyButton>}</span></div>) : <p className="empty-copy">No visitors registered.</p>}</div></div>}
+        {tab === 'Visitors' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(visitors.length, 2), 5)} label="Refreshing visitor records" /> : visitors.length ? visitors.map((v) => <div className="request-row" key={v.id}><span className={`avatar avatar-${tone(v.id)}`}>{initials(v.name)}</span><span className="request-person"><strong>{v.name}</strong><span>{v.purpose}{v.appointment_id ? ` · ${code(v.appointment_id)}` : ''}</span></span><span className="request-detail"><strong>{v.department}</strong><span>{v.arrived_at ? `Arrived ${stamp(v.arrived_at)}` : 'Not arrived'}{v.left_at ? ` · Left ${stamp(v.left_at)}` : ''}</span></span><span className="row-actions">{!v.arrived_at && <BusyButton label="Mark arrived" disabled={busy} onClick={() => run(() => markVisit(v.id, 'arrived_at'), 'Arrival recorded')}>Mark arrived</BusyButton>}{v.arrived_at && !v.left_at && <BusyButton label="Mark left" disabled={busy} onClick={() => run(() => markVisit(v.id, 'left_at'), 'Departure recorded')}>Mark left</BusyButton>}</span></div>) : <p className="empty-copy">No visitor records yet. Use Register visitor to record a visit.</p>}</div></div>}
 
         {tab === 'Availability' && <Availability profile={profile} avail={avail} blocks={blocks} depts={depts} today={today} run={run} busy={busy} refreshing={refreshing} />}
 
@@ -213,7 +224,7 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
 
         {tab === 'Offices' && <Offices departments={departments} run={run} busy={busy} refreshing={refreshing} />}
 
-        {tab === 'Email log' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={3} label="Refreshing the email log" /> : emails.length ? emails.map((m) => <div className="request-row" key={m.id}><span className="request-person"><strong>{m.appointment_id ? code(m.appointment_id) : 'No reference'}: {m.event}</strong><span>{m.to_email}</span></span><span className="request-detail"><strong>{m.status}</strong><span>{m.detail || stamp(m.created_at)}</span></span></div>) : <p className="empty-copy">No emails yet.</p>}</div></div>}
+        {tab === 'Email log' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={3} label="Refreshing the email log" /> : emails.length ? emails.map((m) => <div className="request-row" key={m.id}><span className="request-person"><strong>{m.appointment_id ? code(m.appointment_id) : 'No reference'}: {m.event}</strong><span>{m.to_email}</span></span><span className="request-detail"><strong>{m.status}</strong><span>{m.detail || stamp(m.created_at)}</span></span></div>) : <p className="empty-copy">No appointment emails have been logged yet.</p>}</div></div>}
 
         {tab === 'Users' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(users.length, 2), 6)} label="Refreshing the user list" /> : users.map((u) => <UserRow key={u.id} u={u} self={u.id === profile.id} depts={depts} run={run} busy={busy} />)}</div></div>}
       </div>
@@ -341,10 +352,10 @@ function Wizard({ today, depts, own, run, busy }: { today: string; depts: string
   return <div className="wizard">
     <div className="wizard-steps">{['Office', 'Time slot', 'Purpose'].map((s, i) => <span key={s} className={step >= i + 1 ? 'active' : ''}>{i + 1} {s}</span>)}</div>
     {step === 1 && <div className="choice-grid">{depts.filter((d) => d !== own).map((d) => <button type="button" key={d} className={`choice-card ${department === d ? 'selected' : ''}`} onClick={() => setDepartment(d)}>{d}</button>)}</div>}
-    {step === 2 && <><DatePicker id="appt-date" label="Date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} />{date ? <><SlotPicker department={department} date={date} value={time} onPick={setTime} /><p className="muted-note">Only approved or rescheduled bookings block a slot. Pending requests do not.</p></> : <p className="muted-note">Office hours run Monday to Friday, 9:00 AM to 3:00 PM.</p>}</>}
+    {step === 2 && <><DatePicker id="appt-date" label="Date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} />{date ? <><SlotPicker department={department} date={date} value={time} onPick={setTime} /><p className="muted-note">A request is not a confirmed booking until the office approves it. Pending requests leave the slot available.</p></> : <p className="muted-note">Office hours run Monday to Friday, 9:00 AM to 3:00 PM.</p>}</>}
     {step === 3 && <><label className="field-label" htmlFor="appt-purpose">What is the appointment for?</label><textarea id="appt-purpose" className="field-input" rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} /></>}
     <div className="form-actions">{step > 1 && <button className="secondary-button" onClick={() => setStep(step - 1)}>Back</button>}
-      {step < 3 ? <button className="primary-button" disabled={!ok} onClick={() => setStep(step + 1)}>Continue</button> : <BusyButton label="Submit request" className="primary-button" disabled={!ok || busy} onClick={() => run(() => book({ department, date, time, purpose }), 'Request submitted')}>Submit request</BusyButton>}</div></div>
+      {step < 3 ? <button className="primary-button" disabled={!ok} onClick={() => setStep(step + 1)}>Continue</button> : <BusyButton label="Submit request" className="primary-button" disabled={!ok || busy} onClick={() => run(() => book({ department, date, time, purpose }), 'Request submitted. Waiting for office approval.')}>Submit request</BusyButton>}</div></div>
 }
 
 function Review({ a, today, run, busy }: { a: Appt; today: string; run: Run; busy: boolean }) {
@@ -392,8 +403,8 @@ function Availability({ profile, avail, blocks, depts, today, run, busy, refresh
       <tbody>{SLOTS.map((t) => <tr key={t}><td>{t}</td>{WEEKDAYS.map((w) => <td key={w.n}><input type="checkbox" aria-label={`${w.label} ${t}`} checked={on.has(`${w.n}-${t}`)} onChange={(e) => run(() => toggleSlot(dept, w.n, t, e.target.checked), 'Availability updated')} /></td>)}</tr>)}</tbody></table></div>
 
     <div className="block-section">
-      <h3>Not available</h3>
-      <p className="muted-note">Close a whole day for a holiday, or a single slot for a meeting. Unavailable times cannot be requested.</p>
+      <h3>Close dates or times</h3>
+      <p className="muted-note">Block one time or a whole day for a closure or meeting. Existing approved appointments are not cancelled automatically.</p>
       <div className="block-form">
         <DatePicker id="block-date" label="Date" value={date} min={today} onChange={setDate} />
         <div>
@@ -423,10 +434,10 @@ function UserRow({ u, self, depts, run, busy }: { u: Profile; self: boolean; dep
   const [dept, setDept] = useState(u.department ?? depts[0])
   const changed = role !== u.role || (role === 'approver' && dept !== u.department)
   return <div className="request-row"><span className={`avatar avatar-${tone(u.full_name.length)}`}>{u.full_name.trim() ? initials(u.full_name) : u.email.slice(0, 1).toUpperCase()}</span>
-    <span className="request-person"><strong>{u.full_name || 'No name'}</strong><span>{u.email}</span></span>
+    <span className="request-person"><strong>{u.full_name || 'Name not provided'}</strong><span>{u.email}</span></span>
     <span className="request-detail user-detail"><select aria-label={`Role for ${u.email}`} className="field-input" value={role} disabled={self} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
       {role === 'approver' && <select aria-label={`Office for ${u.email}`} className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>}</span>
-    <span className="row-actions">{u.role === 'visitor' && <BusyButton label={u.authorized ? 'Revoke' : 'Authorize'} disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</BusyButton>}<BusyButton label="Save" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'User updated')}>Save</BusyButton></span></div>
+    <span className="row-actions">{u.role === 'visitor' && <BusyButton label={u.authorized ? 'Revoke' : 'Authorize'} disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</BusyButton>}<BusyButton label="Save changes" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'Account permissions updated')}>Save changes</BusyButton></span></div>
 }
 
 function Offices({ departments, run, busy, refreshing }: { departments: Dept[]; run: Run; busy: boolean; refreshing: boolean }) {
@@ -445,7 +456,7 @@ function Offices({ departments, run, busy, refreshing }: { departments: Dept[]; 
         <input id="o-name" className="field-input" placeholder="Office name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && name.trim() && !busy) add() }} />
         <BusyButton label="Add office" className="primary-button" disabled={!name.trim() || busy} onClick={add}>Add office</BusyButton>
       </div>
-      <p className="muted-note">A new office starts with the standard 9:00 AM to 3:00 PM slots, Monday to Friday.</p>
+      <p className="muted-note">New offices start with appointment slots at 9, 10 and 11 AM, and 1, 2 and 3 PM, Monday to Friday.</p>
     </div>
   </div>
 }
