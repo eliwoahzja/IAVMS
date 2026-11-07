@@ -58,15 +58,15 @@ export async function slotStates(department: string, date: string): Promise<Slot
 export async function book(input: { department: string; date: string; time: string; purpose: string }): Promise<R> {
   const p = await me()
   if (p.role === 'admin') return { error: 'Administrators do not book appointments.' }
-  if (!p.authorized) return { error: 'Your account is waiting for authorization by SPCC staff.' }
+  if (!p.authorized) return { error: 'SPCC staff must authorize your account before you request an appointment.' }
   const { department, date, time } = input
   const purpose = input.purpose.trim()
-  if (!(await offices()).includes(department) || !SLOTS.includes(time) || !DATE.test(date) || !purpose) return { error: 'Check the form and try again.' }
+  if (!(await offices()).includes(department) || !SLOTS.includes(time) || !DATE.test(date) || !purpose) return { error: 'Choose an office, date and time, and enter an appointment purpose.' }
   if (purpose.length > MAX_TEXT) return { error: `Keep the purpose under ${MAX_TEXT} characters.` }
   if (p.role === 'approver' && p.department === department) return { error: 'Choose a different office.' }
   if (date < today()) return { error: 'Pick a date that has not passed.' }
   const slot = (await states(department, date)).find((s) => s.time === time)
-  if (!slot || slot.state === 'closed' || slot.state === 'booked') return { error: 'That slot is not available.' }
+  if (!slot || slot.state === 'closed' || slot.state === 'booked') return { error: 'This appointment time is unavailable. Choose another time.' }
   const db = admin()
   const { count } = await db.from('appointments').select('id', { count: 'exact', head: true })
     .eq('requester_id', p.id).eq('department', department).eq('date', date).eq('time', time)
@@ -75,7 +75,7 @@ export async function book(input: { department: string; date: string; time: stri
   const { data, error } = await db.from('appointments')
     .insert({ requester_id: p.id, requester_name: p.full_name, requester_email: p.email, requester_type: p.role, department, date, time, purpose })
     .select().single()
-  if (error || !data) return { error: 'Could not save the request.' }
+  if (error || !data) return { error: 'Your appointment request was not saved. Please try again.' }
   await notify(data, 'pending review')
   await notifyOffice(data)
   revalidatePath('/')
@@ -84,7 +84,7 @@ export async function book(input: { department: string; date: string; time: stri
 
 export async function decide(id: number, action: 'approve' | 'reject' | 'reschedule', to?: { date: string; time: string }): Promise<R> {
   const p = await me()
-  if (!isStaff(p)) return { error: 'Not allowed.' }
+  if (!isStaff(p)) return { error: 'Your account does not have permission for this action.' }
   const db = admin()
   const { data: a } = await db.from('appointments').select('*').eq('id', id).single()
   if (!a || !['Pending', 'Approved', 'Rescheduled'].includes(a.status)) return { error: 'This appointment is closed.' }
@@ -100,12 +100,12 @@ export async function decide(id: number, action: 'approve' | 'reject' | 'resched
   else {
     if (!to || !DATE.test(to.date) || !SLOTS.includes(to.time) || to.date < today()) return { error: 'Pick a new date and slot.' }
     const slot = (await states(a.department, to.date)).find((s) => s.time === to.time)
-    if (!slot || slot.state === 'closed' || slot.state === 'booked') return { error: 'That slot is not available.' }
+    if (!slot || slot.state === 'closed' || slot.state === 'booked') return { error: 'This appointment time is unavailable. Choose another time.' }
     patch = { status: 'Rescheduled', date: to.date, time: to.time }
     event = 'rescheduled'
   }
   const { error } = await db.from('appointments').update(patch).eq('id', id)
-  if (error) return { error: error.code === '23505' ? 'That slot already has a confirmed booking.' : 'Could not update the request.' }
+  if (error) return { error: error.code === '23505' ? 'That slot already has a confirmed booking.' : 'The appointment decision was not saved. Please try again.' }
   await notify({ ...a, ...patch }, event)
   revalidatePath('/')
   return {}
@@ -115,10 +115,10 @@ export async function cancel(id: number): Promise<R> {
   const p = await me()
   const db = admin()
   const { data: a } = await db.from('appointments').select('*').eq('id', id).single()
-  if (!a || (a.requester_id !== p.id && p.role !== 'admin')) return { error: 'Not allowed.' }
+  if (!a || (a.requester_id !== p.id && p.role !== 'admin')) return { error: 'Your account does not have permission for this action.' }
   if (!['Pending', 'Approved', 'Rescheduled'].includes(a.status)) return { error: 'This appointment is already closed.' }
   const { error } = await db.from('appointments').update({ status: 'Cancelled' }).eq('id', id)
-  if (error) return { error: 'Could not cancel.' }
+  if (error) return { error: 'The appointment was not cancelled. Please try again.' }
   await notify(a, 'cancelled')
   revalidatePath('/')
   return {}
@@ -128,8 +128,8 @@ export async function registerVisitor(input: { name: string; purpose: string; de
   const p = await me()
   const name = input.name.trim()
   const purpose = input.purpose.trim()
-  if (!isStaff(p) || !ownsOffice(p, input.department)) return { error: 'Not allowed.' }
-  if (!name || !purpose || !(await offices()).includes(input.department)) return { error: 'Fill in every field.' }
+  if (!isStaff(p) || !ownsOffice(p, input.department)) return { error: 'Your account does not have permission for this action.' }
+  if (!name || !purpose || !(await offices()).includes(input.department)) return { error: 'Enter the visitor name, purpose and destination office.' }
   if (name.length > MAX_NAME) return { error: `Keep the name under ${MAX_NAME} characters.` }
   if (purpose.length > MAX_TEXT) return { error: `Keep the purpose under ${MAX_TEXT} characters.` }
   const db = admin()
@@ -138,7 +138,7 @@ export async function registerVisitor(input: { name: string; purpose: string; de
     if (!a || a.department !== input.department) return { error: 'That appointment belongs to another office.' }
   }
   const { error } = await db.from('visitors').insert({ name, purpose, department: input.department, appointment_id: input.appointmentId, created_by: p.id })
-  if (error) return { error: 'Could not save the record.' }
+  if (error) return { error: 'The visitor record was not saved. Please try again.' }
   revalidatePath('/')
   return {}
 }
@@ -147,24 +147,24 @@ export async function markVisit(id: number, field: 'arrived_at' | 'left_at'): Pr
   const p = await me()
   const db = admin()
   const { data: v } = await db.from('visitors').select('*').eq('id', id).single()
-  if (!v || !isStaff(p) || !ownsOffice(p, v.department)) return { error: 'Not allowed.' }
-  if (field === 'left_at' && !v.arrived_at) return { error: 'Record the arrival first.' }
+  if (!v || !isStaff(p) || !ownsOffice(p, v.department)) return { error: 'Your account does not have permission for this action.' }
+  if (field === 'left_at' && !v.arrived_at) return { error: 'Record the visitor’s arrival before marking their departure.' }
   if (v[field]) return {}
   const { error } = await db.from('visitors').update({ [field]: new Date().toISOString() }).eq('id', id)
-  if (error) return { error: 'Could not save.' }
+  if (error) return { error: 'The change was not saved. Please try again.' }
   revalidatePath('/')
   return {}
 }
 
 export async function toggleSlot(department: string, day: number, time: string, on: boolean): Promise<R> {
   const p = await me()
-  if (!ownsOffice(p, department) || !(await offices()).includes(department) || !SLOTS.includes(time) || day < 1 || day > 5) return { error: 'Not allowed.' }
+  if (!ownsOffice(p, department) || !(await offices()).includes(department) || !SLOTS.includes(time) || day < 1 || day > 5) return { error: 'Your account does not have permission for this action.' }
   const db = admin()
   const q = on
     ? db.from('availability').upsert({ department, weekday: day, time })
     : db.from('availability').delete().eq('department', department).eq('weekday', day).eq('time', time)
   const { error } = await q
-  if (error) return { error: 'Could not update availability.' }
+  if (error) return { error: 'The office schedule was not updated. Please try again.' }
   revalidatePath('/')
   return {}
 }
@@ -172,7 +172,7 @@ export async function toggleSlot(department: string, day: number, time: string, 
 export async function blockSlot(department: string, date: string, time: string | null, reasonIn: string): Promise<R> {
   const p = await me()
   const reason = reasonIn.trim().replace(/\s+/g, ' ')
-  if (!ownsOffice(p, department)) return { error: 'Not allowed.' }
+  if (!ownsOffice(p, department)) return { error: 'Your account does not have permission for this action.' }
   if (!(await offices()).includes(department)) return { error: 'That office is not taking appointments.' }
   if (!DATE.test(date) || date < today()) return { error: 'Pick a date that has not passed.' }
   if (time !== null && !SLOTS.includes(time)) return { error: 'Pick a time or the whole day.' }
@@ -188,7 +188,7 @@ export async function unblockSlot(id: number): Promise<R> {
   const p = await me()
   const db = admin()
   const { data: b } = await db.from('blocked_slots').select('department').eq('id', id).single()
-  if (!b || !ownsOffice(p, b.department)) return { error: 'Not allowed.' }
+  if (!b || !ownsOffice(p, b.department)) return { error: 'Your account does not have permission for this action.' }
   const { error } = await db.from('blocked_slots').delete().eq('id', id)
   if (error) return { error: 'Could not open that time.' }
   revalidatePath('/')
@@ -197,12 +197,12 @@ export async function unblockSlot(id: number): Promise<R> {
 
 export async function saveOffice(nameIn: string, active: boolean): Promise<R> {
   const p = await me()
-  if (p.role !== 'admin') return { error: 'Not allowed.' }
+  if (p.role !== 'admin') return { error: 'Your account does not have permission for this action.' }
   const name = nameIn.trim().replace(/\s+/g, ' ')
   if (name.length < 2 || name.length > 60) return { error: 'Use 2 to 60 characters.' }
   const db = admin()
   const { error } = await db.from('departments').upsert({ name, active })
-  if (error) return { error: 'Could not save the office.' }
+  if (error) return { error: 'The office settings were not saved. Please try again.' }
   const { count } = await db.from('availability').select('time', { count: 'exact', head: true }).eq('department', name)
   if (!count) {
     const { error: slotError } = await db.from('availability').insert([1, 2, 3, 4, 5].flatMap((weekday) => SLOTS.map((time) => ({ department: name, weekday, time }))))
@@ -214,20 +214,20 @@ export async function saveOffice(nameIn: string, active: boolean): Promise<R> {
 
 export async function setUserRole(userId: string, role: Role, department: string): Promise<R> {
   const p = await me()
-  if (p.role !== 'admin') return { error: 'Not allowed.' }
+  if (p.role !== 'admin') return { error: 'Your account does not have permission for this action.' }
   if (!ROLES.includes(role) || (role === 'approver' && !(await offices()).includes(department))) return { error: 'Approvers need an office.' }
   if (userId === p.id && role !== 'admin') return { error: 'You cannot remove your own admin role.' }
   const { error } = await admin().from('profiles').update({ role, department: role === 'approver' ? department : null }).eq('id', userId)
-  if (error) return { error: 'Could not update the user.' }
+  if (error) return { error: 'The account permissions were not saved. Please try again.' }
   revalidatePath('/')
   return {}
 }
 
 export async function setAuthorized(userId: string, on: boolean): Promise<R> {
   const p = await me()
-  if (p.role !== 'admin') return { error: 'Not allowed.' }
+  if (p.role !== 'admin') return { error: 'Your account does not have permission for this action.' }
   const { error } = await admin().from('profiles').update({ authorized: on }).eq('id', userId)
-  if (error) return { error: 'Could not update the visitor.' }
+  if (error) return { error: 'Visitor access was not updated. Please try again.' }
   revalidatePath('/')
   return {}
 }
