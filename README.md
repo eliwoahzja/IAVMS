@@ -21,13 +21,29 @@ An existing database that predates `supabase/migrations/` needs each file in tha
 once, in order (`0001_gender.sql` … `0005_drop_gender.sql`). They are written to be repeatable;
 `0005` removes the gender column that `0001` added, because the field is not part of the study.
 
-Email needs a Resend key. Without `RESEND_API_KEY` every message is recorded in the Email log as
-`skipped` and nothing is sent. Until a domain is verified in Resend, `EMAIL_FROM` has to stay on
-`onboarding@resend.dev`, and Resend only delivers from that address to the mailbox that owns the
-Resend account; anything else comes back as 403 and is logged as `failed` with the provider's
-message. Verify a domain, then point `EMAIL_FROM` at it, before expecting students to receive
-mail. `SUPABASE_SERVICE_ROLE_KEY` is required as well: without it the server actions cannot
-write, and bookings and decisions fail.
+## Email notifications with Resend
+
+IAVMS sends transactional messages when a request is submitted, approved, rejected, rescheduled or cancelled. It also alerts the assigned department approvers about new requests. If no approver is assigned to an office, administrators receive the review notification instead.
+
+1. Open [Resend](https://resend.com/) and create an API key with permission to send emails.
+2. For delivery to SPCC students, staff and visitors, add a domain you control under [Domains](https://resend.com/domains). Copy the DKIM, SPF and any other DNS records Resend requests to your domain's DNS settings. Wait for the domain's sending status to become verified.
+3. Set these values in `.env.local` for local development, or in the hosting provider's server-side environment settings:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-IAVMS-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_IAVMS_PUBLISHABLE_OR_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_IAVMS_SERVER_SECRET
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
+EMAIL_FROM="SPCC Appointments <notifications@YOUR_VERIFIED_DOMAIN>"
+```
+
+4. Restart the development server after changing `.env.local`. Redeploy after changing hosted environment variables.
+5. Submit an appointment request using a permitted test account. Check the `Email delivery` tab for `sent`, `skipped` or `failed`. The `sent` status means Resend accepted the request, not necessarily that the recipient opened or received the email. For delivery events, check the Resend dashboard.
+
+The `onboarding@resend.dev` sender is intended only for testing to the email address associated with the Resend account. Verify your own domain before expecting notifications to reach other users. If `RESEND_API_KEY` is absent, IAVMS still saves the appointment but records email delivery as `skipped`. A failed email does not undo the appointment decision.
+
+The service role key and Resend API key belong only in server-side variables. Never commit them to GitHub or prefix them with `NEXT_PUBLIC_`.
+
 
 ## Users and roles
 
