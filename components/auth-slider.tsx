@@ -36,8 +36,8 @@ export function AuthSlider({ initialMode, error, msg }: {
 
       <section className="auth-panel auth-panel-signin" inert={up} aria-label="Sign in">
         <div className="auth-panel-inner">
-          <h1>Welcome back</h1>
-          <p className="auth-panel-sub">Sign in to book an office visit.</p>
+          <h1>Sign in to IAVMS</h1>
+          <p className="auth-panel-sub">Access your appointments, review requests or update office schedules.</p>
           {!up && notice.error && <p className="auth-note auth-error" role="alert">{notice.error}</p>}
           {!up && notice.msg && <p className="auth-note" role="status">{notice.msg}</p>}
           <form action={signIn}>
@@ -52,7 +52,7 @@ export function AuthSlider({ initialMode, error, msg }: {
       <section className="auth-panel auth-panel-signup" inert={!up} aria-label="Create account">
         <div className="auth-panel-inner">
           <h1>Create account</h1>
-          <p className="auth-panel-sub">Students, faculty and external visitors use the same form.</p>
+          <p className="auth-panel-sub">For SPCC students, faculty and external visitors requesting an appointment.</p>
           {up && notice.error && <p className="auth-note auth-error" role="alert">{notice.error}</p>}
           {up && notice.msg && <p className="auth-note" role="status">{notice.msg}</p>}
           <form action={signUp}>
@@ -100,17 +100,17 @@ export function AuthSlider({ initialMode, error, msg }: {
         </div>
         <div className="auth-overlay-track">
           <div className="auth-overlay-panel auth-overlay-new" inert={up}>
-            <p className="auth-overlay-kicker">New here</p>
-            <h2>Book the office, skip the queue</h2>
-            <p>Pick an office, pick a slot, say what it is for. The office approves it.</p>
+            <p className="auth-overlay-kicker">Appointment requests</p>
+            <h2>Arrange your visit to an SPCC office</h2>
+            <p>Choose an office and available time. The assigned staff member reviews your request before it is confirmed.</p>
             <button type="button" className="auth-ghost" onClick={() => go('signup')}>
               Create an account <ArrowRight />
             </button>
           </div>
           <div className="auth-overlay-panel auth-overlay-back" inert={!up}>
-            <p className="auth-overlay-kicker">Already registered</p>
-            <h2>Sign in and pick up where you left off</h2>
-            <p>Your requests, approvals and visitor logs are waiting for you.</p>
+            <p className="auth-overlay-kicker">Existing account</p>
+            <h2>Check your appointments and requests</h2>
+            <p>Requesters track decisions. Department staff manage approvals and visit records.</p>
             <button type="button" className="auth-ghost" onClick={() => go('signin')}>
               Sign in <ArrowRight />
             </button>
