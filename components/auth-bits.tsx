@@ -7,7 +7,7 @@ import { Eye, EyeOff } from 'lucide-react'
 export function AuthBrand() {
   return <div className="auth-brand">
     <img className="auth-seal" src="/seal.png" alt="" width={76} height={76} />
-    <strong>SPCC Appointments</strong>
+    <strong>SPCC Appointment and Visitor Management</strong>
     <span>Systems Plus Computer College, Caloocan</span>
   </div>
 }
