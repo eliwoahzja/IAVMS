@@ -3,14 +3,14 @@
 Web-Based Institutional Appointment and Visitor Management System with Semi-Automated
 Scheduling, Department-Based Approval, and Email Notifications for Systems Plus Computer
 College – Caloocan. Next.js (App Router), Supabase (accounts, Postgres, row level security)
-and Resend (email).
+and a configurable SMTP or Resend email transport.
 
 ## Setup
 
 1. Create a Supabase project and run `supabase/schema.sql` in the SQL Editor.
 2. Copy `.env.example` to `.env.local`, or add the same variables in Vercel:
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
-   `RESEND_API_KEY`, `EMAIL_FROM`.
+   `EMAIL_PROVIDER`, SMTP settings or `RESEND_API_KEY`, and `EMAIL_FROM`.
 3. Register an account in the app. Sign-up only creates requesters; grant staff access with:
 
 ```sql
@@ -21,29 +21,53 @@ An existing database that predates `supabase/migrations/` needs each file in tha
 once, in order (`0001_gender.sql` … `0005_drop_gender.sql`). They are written to be repeatable;
 `0005` removes the gender column that `0001` added, because the field is not part of the study.
 
-## Email notifications with Resend
+## Email notifications with SMTP or Resend
 
-IAVMS sends transactional messages when a request is submitted, approved, rejected, rescheduled or cancelled. It also alerts the assigned department approvers about new requests. If no approver is assigned to an office, administrators receive the review notification instead.
+Appointment email templates remain in `lib/email/messages.ts`. Transport and delivery logging are in `lib/email/delivery.ts`. Existing appointment actions and the `email_log` table work with either provider.
 
-1. Open [Resend](https://resend.com/) and create an API key with permission to send emails.
-2. For delivery to SPCC students, staff and visitors, add a domain you control under [Domains](https://resend.com/domains). Copy the DKIM, SPF and any other DNS records Resend requests to your domain's DNS settings. Wait for the domain's sending status to become verified.
-3. Set these values in `.env.local` for local development, or in the hosting provider's server-side environment settings:
+Choose your delivery method in `.env.local` on the computer running IAVMS. The app runs locally; Vercel is optional for preview only. Restart the Next.js server after changing environment variables.
+
+### Custom SMTP (Maileroo, Gmail, school mail, or another provider)
+
+Install dependencies with `npm install` after pulling the latest source. The SMTP client uses Nodemailer over authenticated TLS.
 
 ```dotenv
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR-IAVMS-PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_IAVMS_PUBLISHABLE_OR_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY=YOUR_IAVMS_SERVER_SECRET
-RESEND_API_KEY=re_YOUR_RESEND_API_KEY
-EMAIL_FROM="SPCC Appointments <notifications@YOUR_VERIFIED_DOMAIN>"
+EMAIL_PROVIDER=smtp
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-smtp-username
+SMTP_PASS=your-smtp-password
+EMAIL_FROM="SPCC Appointments <your-authorized-sender@example.com>"
 ```
 
-4. Restart the development server after changing `.env.local`. Redeploy after changing hosted environment variables.
-5. Submit an appointment request using a permitted test account. Check the `Email delivery` tab for `sent`, `skipped` or `failed`. The `sent` status means Resend accepted the request, not necessarily that the recipient opened or received the email. For delivery events, check the Resend dashboard.
+- Set `SMTP_HOST` to your provider's hostname, not the address of the local website.
+- Port `587` uses STARTTLS and is required to upgrade to an encrypted connection. Port `465` uses TLS immediately: set `SMTP_PORT=465` and `SMTP_SECURE=true`.
+- The sender must be an address the provider authorizes. Enter provider-issued credentials in `.env.local`; do not put them in GitHub.
+- Maileroo's SMTP relay uses `smtp.maileroo.com` with port `587` (STARTTLS) or `465` (TLS), and a full sending-email address as its username. Maileroo requires a verified sending domain for normal outbound delivery. Its sandbox/test inbox is not regular delivery to students.
+- If you have no custom domain, use an email provider that permits SMTP submission from an account you own, such as a supported Gmail account with an application password where enabled, or an institution-approved SMTP account. Use its verified From address, not `onboarding@resend.dev`.
 
-The `onboarding@resend.dev` sender is intended only for testing to the email address associated with the Resend account. Verify your own domain before expecting notifications to reach other users. If `RESEND_API_KEY` is absent, IAVMS still saves the appointment but records email delivery as `skipped`. A failed email does not undo the appointment decision.
+### Resend API (optional)
 
-The service role key and Resend API key belong only in server-side variables. Never commit them to GitHub or prefix them with `NEXT_PUBLIC_`.
+```dotenv
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=re_YOUR_PRIVATE_KEY
+EMAIL_FROM="SPCC Appointments <onboarding@resend.dev>"
+```
 
+Resend's onboarding sender supports limited testing, not production delivery to arbitrary student addresses. Normal sending also requires a verified domain.
+
+### Behavior and checks
+
+- With `EMAIL_PROVIDER=smtp`, IAVMS sends through the configured SMTP relay.
+- With `EMAIL_PROVIDER=resend`, IAVMS uses the existing Resend API.
+- With `EMAIL_PROVIDER=disabled`, the email is recorded as skipped.
+- Without `EMAIL_PROVIDER`, SMTP is selected when `SMTP_HOST` is present; otherwise the Resend integration is used.
+- If credentials are missing, email is logged as `skipped`. If the provider rejects delivery, the attempt is logged as `failed`.
+- `sent` means the SMTP server or Resend accepted the message, not guaranteed inbox delivery. Review the provider's activity logs to confirm delivery.
+- A notification failure does not reverse or silently change an appointment decision.
+
+Never expose `SMTP_PASS`, `SUPABASE_SERVICE_ROLE_KEY` or `RESEND_API_KEY` to the browser. Do not prefix these secrets with `NEXT_PUBLIC_`.
 
 ## Users and roles
 
