@@ -630,3 +630,122 @@ h1, h2 { text-wrap: balance; }
 @media (prefers-reduced-motion: reduce) {.auth-panel, .auth-overlay, .auth-overlay-track, .auth-overlay-panel, .auth-ghost svg { transition: none; }
 .auth-slider[data-mode] .auth-panel { animation: none; }
 }
+:root {
+  --background: #f5f7fb;
+  --line: #dfe4ef;
+  --muted-foreground: #505a72;
+}
+
+.app-shell {
+  background: var(--background);
+}
+
+.content-wrap {
+  max-width: 1160px;
+}
+
+.page-intro {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.page-intro h1 {
+  color: #101745;
+  font-weight: 720;
+  letter-spacing: -.035em;
+}
+
+.intro-copy {
+  max-width: 64ch;
+  font-size: .875rem;
+  line-height: 1.55;
+}
+
+.metric-grid {
+  gap: 12px;
+}
+
+.metric-grid .metric-card {
+  min-height: 126px;
+  padding: 17px 20px;
+  border: 1px solid #dfe4ef;
+  border-top: 3px solid #2e367f;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 28, 65, .03);
+}
+
+.metric-grid .metric-card:nth-child(1) { border-top-color: #bd7b36; }
+.metric-grid .metric-card:nth-child(2) { border-top-color: #2f7464; }
+.metric-grid .metric-card:nth-child(3) { border-top-color: #4c5c9b; }
+.metric-grid .metric-card:nth-child(4) { border-top-color: #7e668e; }
+
+.metric-grid .metric-card::after {
+  display: none;
+}
+
+.metric-grid .metric-value {
+  margin-top: 12px;
+  font-size: clamp(1.75rem, 2.8vw, 2rem);
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em;
+}
+
+.metric-grid .metric-label {
+  margin-top: 4px;
+  font-size: .8125rem;
+  color: #505a72;
+}
+
+.panel {
+  border-color: var(--line);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(20, 28, 65, .025);
+}
+
+.panel-focus {
+  margin-bottom: 14px;
+  border-left: 3px solid #2b367f;
+}
+
+.panel-focus .panel-heading {
+  align-items: center;
+}
+
+.request-row {
+  min-height: 70px;
+  padding: 10px 0;
+}
+
+.request-row:first-child,
+.office-row:first-child {
+  border-top: 0;
+}
+
+.nav-item-active {
+  box-shadow: inset 3px 0 0 #e3a900;
+}
+
+.nav-item:focus-visible,
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.choice-card:focus-visible,
+.auth-ghost:focus-visible {
+  outline: 3px solid #b27d16;
+  outline-offset: 2px;
+}
+
+@media (max-width: 780px) {
+  .page-intro {
+    gap: 14px;
+    padding-bottom: 20px;
+  }
+  .metric-grid .metric-card {
+    min-height: 112px;
+    padding: 14px 15px;
+  }
+  .panel-focus .panel-heading {
+    gap: 12px;
+  }
+}
