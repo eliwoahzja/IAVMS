@@ -10,13 +10,27 @@ import type { Appt, SlotInfo } from '@/lib/types'
 
 function SlotPicker({ department, date, value, onPick }: { department: string; date: string; value: string; onPick: (t: string) => void }) {
   const [slots, setSlots] = useState<SlotInfo[] | null>(null)
+  const [failed, setFailed] = useState(false)
+  const [retry, setRetry] = useState(0)
   useEffect(() => {
     let live = true
     setSlots(null)
-    slotStates(department, date).then((s) => { if (live) setSlots(s) })
+    setFailed(false)
+    slotStates(department, date)
+      .then((result) => {
+        if (!live) return
+        setSlots(result)
+        if (!result.length) setFailed(true)
+      })
+      .catch(() => {
+        if (!live) return
+        setSlots([])
+        setFailed(true)
+      })
     return () => { live = false }
-  }, [department, date])
-  if (!slots) return <div className="slot-grid" aria-busy="true">{SLOTS.map((t) => <span key={t} className="skeleton" />)}</div>
+  }, [department, date, retry])
+  if (failed) return <div role="alert" className="muted-note">Appointment times could not be loaded. Check the server configuration and try again. <button type="button" className="secondary-button" onClick={() => setRetry((n) => n + 1)}>Retry</button></div>
+  if (!slots) return <div className="slot-grid" aria-busy="true" aria-label="Loading appointment times">{SLOTS.map((t) => <span key={t} className="skeleton" />)}</div>
   const label = { open: 'Open', held: 'Request pending', booked: 'Booked', closed: 'Closed' }
   return <div className="slot-grid">{slots.map((s) => <button type="button" key={s.time} disabled={s.state === 'booked' || s.state === 'closed'} className={`choice-card ${value === s.time ? 'selected' : ''}`} onClick={() => onPick(s.time)}>{s.time}<small>{label[s.state]}</small></button>)}</div>
 }
