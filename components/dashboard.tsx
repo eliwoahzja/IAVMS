@@ -100,6 +100,7 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
   const ordered = useMemo(() => [...appts].sort(bySchedule), [appts])
   const count = (s: Status) => ordered.filter((a) => a.status === s).length
   const list = useMemo(() => ordered.filter((a) => (filter === 'All' || a.status === filter) && `${a.requester_name} ${a.department} ${code(a.id)}`.toLowerCase().includes(search.toLowerCase())), [ordered, filter, search])
+  const upcoming = ordered.filter((a) => (a.status === 'Approved' || a.status === 'Rescheduled') && a.date >= today).slice(0, 6)
   const pending = ordered.filter((a) => a.status === 'Pending' && (group === 'admin' || a.department === profile.department)).slice(0, 5)
 
   return <div className="app-shell">
@@ -139,7 +140,8 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
           </section>
           <div className="panel panel-focus"><div className="panel-heading"><div><h2>Awaiting a decision</h2><p className="panel-sub">Requests that staff need to review</p></div><button type="button" className="secondary-button" onClick={() => { setTab('Appointments'); setFilter('Pending') }}>View all requests</button></div>
             <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(pending.length, 2)} label="Refreshing pending requests" /> : pending.length ? pending.map((a, i) => <ApptRow key={a.id} a={a} i={i} actions={<button type="button" className="secondary-button" onClick={() => setModal({ review: a })}>Review</button>} />) : <p className="empty-copy">No pending requests need a decision.</p>}</div></div>
-          </>}
+          <div className="panel"><div className="panel-heading"><div><h2>Upcoming appointments</h2><p className="panel-sub">Approved appointments and confirmed rescheduled times</p></div></div>
+            <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(upcoming.length, 2)} label="Refreshing appointments" /> : upcoming.length ? upcoming.map((a, i) => <ApptRow key={a.id} a={a} i={i} />) : <p className="empty-copy">No upcoming approved appointments. New approvals will appear here.</p>}</div></div></>}
 
         {tab === 'Appointments' && <div className="panel"><div className="panel-heading"><div><h2>{list.length} {list.length === 1 ? 'request' : 'requests'}</h2></div>
           <div className="filters"><label className="field-label" htmlFor="f-status">Status</label><select id="f-status" className="field-input" value={filter} onChange={(e) => setFilter(e.target.value as Status | 'All')}><option>All</option>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div></div>
