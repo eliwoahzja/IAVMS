@@ -749,3 +749,13 @@ h1, h2 { text-wrap: balance; }
     gap: 12px;
   }
 }
+
+.account-delete-confirm { grid-column: 1 / -1; width: 100%; padding: 14px; margin-top: 8px; border: 1px solid #e3b4b4; border-radius: 10px; background: #fff5f5; }
+.account-delete-confirm p { margin: 0 0 12px; color: #812626; font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+.account-delete-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.account-delete-controls .field-input { flex: 1 1 220px; max-width: 360px; min-width: 0; }
+.account-delete-controls .secondary-button { min-height: 44px; }
+@media (max-width: 480px) {
+  .account-delete-controls { flex-direction: column; align-items: stretch; }
+  .account-delete-controls .field-input { flex: auto; width: 100%; max-width: none; }
+}
