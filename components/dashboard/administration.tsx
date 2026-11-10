@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { blockSlot, saveOffice, setAuthorized, setUserRole, toggleSlot, unblockSlot } from '@/app/actions'
+import { blockSlot, deleteAccount, saveOffice, setAuthorized, setUserRole, toggleSlot, unblockSlot } from '@/app/actions'
 import { DatePicker } from '@/components/date-picker'
 import { SkeletonRows } from '@/components/skeleton'
 import { BusyButton, type Run } from '@/components/dashboard/shared'
@@ -56,12 +56,24 @@ export function Availability({ profile, avail, blocks, depts, today, run, busy, 
 export function UserRow({ u, self, depts, run, busy }: { u: Profile; self: boolean; depts: string[]; run: Run; busy: boolean }) {
   const [role, setRole] = useState<Role>(u.role)
   const [dept, setDept] = useState(u.department ?? depts[0])
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [typedEmail, setTypedEmail] = useState('')
   const changed = role !== u.role || (role === 'approver' && dept !== u.department)
+  const closeDelete = () => { setConfirmDelete(false); setTypedEmail('') }
   return <div className="request-row"><span className={`avatar avatar-${tone(u.full_name.length)}`}>{u.full_name.trim() ? initials(u.full_name) : u.email.slice(0, 1).toUpperCase()}</span>
     <span className="request-person"><strong>{u.full_name || 'Name not provided'}</strong><span>{u.email}</span></span>
-    <span className="request-detail user-detail"><select aria-label={`Role for ${u.email}`} className="field-input" value={role} disabled={self} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
-      {role === 'approver' && <select aria-label={`Office for ${u.email}`} className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>}</span>
-    <span className="row-actions">{u.role === 'visitor' && <BusyButton label={u.authorized ? 'Revoke' : 'Authorize'} disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</BusyButton>}<BusyButton label="Save changes" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'Account permissions updated')}>Save changes</BusyButton></span></div>
+    <span className="request-detail user-detail"><select aria-label={`Role for ${u.email}`} className="field-input" value={role} disabled={self || busy} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
+      {role === 'approver' && <select aria-label={`Office for ${u.email}`} className="field-input" value={dept} disabled={self || busy} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>}</span>
+    <span className="row-actions">{u.role === 'visitor' && <BusyButton label={u.authorized ? 'Revoke' : 'Authorize'} disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</BusyButton>}<BusyButton label="Save changes" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'Account permissions updated')}>Save changes</BusyButton>
+      {!self && <button type="button" className={`secondary-button${confirmDelete ? '' : ' danger'}`} disabled={busy} aria-expanded={confirmDelete} onClick={() => confirmDelete ? closeDelete() : setConfirmDelete(true)}>{confirmDelete ? 'Keep account' : 'Delete account'}</button>}</span>
+    {confirmDelete && <div className="account-delete-confirm" role="group" aria-label={`Confirm deletion of ${u.email}`}>
+      <p>Delete this account, its appointments, and associated records permanently. Type <strong>{u.email}</strong> to confirm.</p>
+      <div className="account-delete-controls"><input type="text" className="field-input" value={typedEmail} aria-label={`Type ${u.email} to confirm deletion`} placeholder="Enter account email" spellCheck={false} autoComplete="off" onChange={(e) => setTypedEmail(e.target.value)} />
+        <BusyButton label={`Permanently delete ${u.email}`} className="secondary-button danger" disabled={busy || typedEmail.trim() !== u.email} onClick={() => run(() => deleteAccount(u.id), 'Account and associated records deleted')}>Delete permanently</BusyButton>
+        <button type="button" className="secondary-button" onClick={closeDelete} disabled={busy}>Cancel</button>
+      </div>
+    </div>}
+  </div>
 }
 
 export function Offices({ departments, run, busy, refreshing }: { departments: Dept[]; run: Run; busy: boolean; refreshing: boolean }) {
