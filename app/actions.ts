@@ -3,7 +3,7 @@
 import { slotStates as getSlots, book as submitBooking, decide as decideBooking, cancel as cancelBooking } from '@/lib/actions/appointments'
 import { registerVisitor as createVisitor, markVisit as updateVisitor } from '@/lib/actions/visitors'
 import { toggleSlot as setSlot, blockSlot as closeSlot, unblockSlot as openSlot, saveOffice as updateOffice } from '@/lib/actions/offices'
-import { setUserRole as updateRole, setAuthorized as updateAuthorization } from '@/lib/actions/users'
+import { setUserRole as updateRole, setAuthorized as updateAuthorization, deleteAccount as removeAccount } from '@/lib/actions/users'
 import { signIn as performSignIn, signUp as performSignUp, signOut as performSignOut } from '@/lib/actions/auth'
 import type { Role } from '@/lib/types'
 
@@ -42,6 +42,9 @@ export async function setUserRole(userId: string, role: Role, department: string
 }
 export async function setAuthorized(userId: string, on: boolean) {
   return updateAuthorization(userId, on)
+}
+export async function deleteAccount(userId: string) {
+  return removeAccount(userId)
 }
 export async function signIn(fd: FormData) {
   return performSignIn(fd)
