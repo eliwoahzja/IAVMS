@@ -24,3 +24,15 @@ export async function setAuthorized(userId: string, on: boolean): Promise<R> {
   return {}
 }
 
+
+export async function deleteAccount(userId: string): Promise<R> {
+  const p = await me()
+  if (p.role !== 'admin') return { error: 'Only administrators can delete accounts.' }
+  if (userId === p.id) return { error: 'You cannot delete your own account.' }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) return { error: 'Invalid account ID.' }
+  const { data, error } = await admin().rpc('admin_delete_account', { p_target_id: userId })
+  if (error) return { error: error.message.includes('last administrator') ? 'You cannot delete the last administrator.' : 'Account deletion failed. No records were removed.' }
+  if (!data) return { error: 'This account no longer exists.' }
+  revalidatePath('/')
+  return {}
+}
