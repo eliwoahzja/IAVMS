@@ -18,7 +18,7 @@ update public.profiles set role = 'admin' where email = 'you@spcc.ph';
 ```
 
 An existing database that predates `supabase/migrations/` needs each file in that folder run
-once, in order (`0001_gender.sql` … `0005_drop_gender.sql`). They are written to be repeatable;
+once, in order (`0001_gender.sql` … `0006_admin_delete_account.sql`). They are written to be repeatable;
 `0005` removes the gender column that `0001` added, because the field is not part of the study.
 
 ## Email notifications with SMTP or Resend
@@ -134,8 +134,7 @@ see or stamp them.
 - **Retention:** visitor records and the email log are kept for 24 months, then removed by
   `select * from public.purge_expired_records();`. The function is executable by the service role
   only. Appointment history is retained as an institutional record.
-- **Deletion:** deleting an account removes the profile and its appointments through the cascade
-  on `profiles.id`.
+- **Deletion:** administrators can delete another account in the Users tab by confirming its email. The server verifies the administrator role and calls `admin_delete_account` through the service role. The database removes the account, its appointments, linked visitor and email records, and records created by the user in one transaction. Administrators cannot delete themselves, and the last administrator is protected.
 
 ## Accessibility
 
