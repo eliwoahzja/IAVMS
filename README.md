@@ -18,7 +18,7 @@ update public.profiles set role = 'admin' where email = 'you@spcc.ph';
 ```
 
 An existing database that predates `supabase/migrations/` needs each file in that folder run
-once, in order (`0001_gender.sql` … `0006_admin_delete_account.sql`). They are written to be repeatable;
+once, in order (`0001_gender.sql` … `0007_admin_delete_account.sql`). They are written to be repeatable;
 `0005` removes the gender column that `0001` added, because the field is not part of the study.
 
 ## Email notifications with SMTP or Resend
