@@ -4,7 +4,7 @@ import { approverMessage, requesterMessage, type Mailable } from './email/messag
 
 export async function notify(a: Mailable, event: string) {
   const message = requesterMessage(a, event)
-  await log(a, a.requester_email, event, await send(a.requester_email, message.subject, message.text))
+  await log(a, a.requester_email, event, await send(a.requester_email, message.subject, message.text, message.html))
 }
 
 export async function notifyOffice(a: Mailable) {
@@ -15,6 +15,6 @@ export async function notifyOffice(a: Mailable) {
   const recipients = [...new Set([...approvers, ...((administrators ?? []) as { email: string }[])].map((p) => p.email))]
   const message = approverMessage(a)
   for (const email of recipients) {
-    await log(a, email, 'new request for review', await send(email, message.subject, message.text))
+    await log(a, email, 'new request for review', await send(email, message.subject, message.text, message.html))
   }
 }
