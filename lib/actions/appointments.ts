@@ -42,8 +42,12 @@ export async function decide(id: number, action: 'approve' | 'reject' | 'resched
   const p = await me()
   if (!isStaff(p)) return { error: 'Your account does not have permission for this action.' }
   const db = admin()
-  const { data: a } = await db.from('appointments').select('*').eq('id', id).single()
-  if (!a || !['Pending', 'Approved', 'Rescheduled'].includes(a.status)) return { error: 'This appointment is closed.' }
+  const { data: a, error: lookupError } = await db.from('appointments').select('*').eq('id', id).maybeSingle()
+  if (lookupError) {
+    console.error('Appointment review lookup failed:', lookupError.message)
+    return { error: 'Could not load the appointment. Check the server connection and Supabase credentials.' }
+  }
+  if (!a || !['Pending', 'Approved', 'Rescheduled'].includes(a.status)) return { error: 'This appointment is closed or no longer exists.' }
   if (action !== 'reschedule' && a.status !== 'Pending') return { error: 'Only pending requests can be approved or rejected.' }
   if (!ownsOffice(p, a.department)) return { error: 'This request belongs to another office.' }
   let patch: Record<string, string>
@@ -70,8 +74,13 @@ export async function decide(id: number, action: 'approve' | 'reject' | 'resched
 export async function cancel(id: number): Promise<R> {
   const p = await me()
   const db = admin()
-  const { data: a } = await db.from('appointments').select('*').eq('id', id).single()
-  if (!a || (a.requester_id !== p.id && p.role !== 'admin')) return { error: 'Your account does not have permission for this action.' }
+  const { data: a, error: lookupError } = await db.from('appointments').select('*').eq('id', id).maybeSingle()
+  if (lookupError) {
+    console.error('Appointment cancellation lookup failed:', lookupError.message)
+    return { error: 'Could not load the appointment. Check the server connection and Supabase credentials.' }
+  }
+  if (!a) return { error: 'Appointment not found. Refresh the page and try again.' }
+  if (a.requester_id !== p.id && p.role !== 'admin') return { error: 'Your account does not have permission for this action.' }
   if (!['Pending', 'Approved', 'Rescheduled'].includes(a.status)) return { error: 'This appointment is already closed.' }
   const { error } = await db.from('appointments').update({ status: 'Cancelled' }).eq('id', id)
   if (error) return { error: 'The appointment was not cancelled. Please try again.' }
