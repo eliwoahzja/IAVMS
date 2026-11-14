@@ -8,5 +8,5 @@ insert into public.departments (name) values ('Accounting Office') on conflict (
 
 insert into public.availability (department, weekday, time)
 select 'Accounting Office', w, t from generate_series(1, 5) as w,
-  unnest(array['9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM']) as t
+  unnest(array['9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM']) as t
 on conflict do nothing;
