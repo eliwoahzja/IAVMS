@@ -4,6 +4,7 @@ export type AppointmentEmailHtml = {
   message: string
   reference: string
   office: string
+  teacher?: string
   date: string
   time: string
   status: 'pending' | 'approved' | 'rejected' | 'rescheduled' | 'cancelled' | 'updated'
@@ -36,6 +37,7 @@ export function appointmentEmailHtml(input: AppointmentEmailHtml): string {
   const fields = [
     ['Reference number', input.reference],
     ['Office', input.office],
+    ...(input.teacher ? [['Teacher', input.teacher]] : []),
     ['Date', input.date],
     ['Time', input.time],
   ]
