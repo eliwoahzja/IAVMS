@@ -315,6 +315,8 @@ select.field-input option { color: var(--ink); }
 .review-summary strong { color: var(--ink); font-size: 0.8125rem; }
 .review-summary span:not(.avatar) { color: var(--g27); font-size: 0.75rem; }
 .wizard { display: flex; flex-direction: column; gap: 20px; }
+.teacher-select { display: grid; gap: 10px; }
+.teacher-select .field-label { margin: 0; }
 .wizard-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .wizard-steps span { padding: 9px 8px; border-radius: 8px; color: var(--muted-foreground); background: var(--g94); text-align: center; font-size: 0.75rem; font-weight: 700; }
 .wizard-steps span.active { color: var(--g09); background: var(--g77); }
