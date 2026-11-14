@@ -1,7 +1,7 @@
 import { revalidatePath } from 'next/cache'
 import { notify, notifyOffice } from '@/lib/email'
 import { admin } from '@/lib/supabase/admin'
-import { SLOTS } from '@/lib/constants'
+import { IT_DEPARTMENT, IT_TEACHERS, SLOTS } from '@/lib/constants'
 import { DATE, MAX_TEXT, today, me, offices, states, isStaff, ownsOffice } from './context'
 import type { R, SlotInfo } from '@/lib/types'
 
@@ -11,12 +11,15 @@ export async function slotStates(department: string, date: string): Promise<Slot
   return states(department, date)
 }
 
-export async function book(input: { department: string; date: string; time: string; purpose: string }): Promise<R> {
+export async function book(input: { department: string; teacher_name?: string | null; date: string; time: string; purpose: string }): Promise<R> {
   const p = await me()
   if (p.role === 'admin') return { error: 'Administrators do not book appointments.' }
   if (!p.authorized) return { error: 'SPCC staff must authorize your account before you request an appointment.' }
   const { department, date, time } = input
   const purpose = input.purpose.trim()
+  const teacher_name = typeof input.teacher_name === 'string' ? input.teacher_name.trim() : null
+  if (department === IT_DEPARTMENT && (!teacher_name || !IT_TEACHERS.some((teacher) => teacher === teacher_name))) return { error: 'Select a valid College of IT teacher before continuing.' }
+  if (department !== IT_DEPARTMENT && teacher_name) return { error: 'Teacher selection is only available for College of IT appointments.' }
   if (!(await offices()).includes(department) || !SLOTS.includes(time) || !DATE.test(date) || !purpose) return { error: 'Choose an office, date and time, and enter an appointment purpose.' }
   if (purpose.length > MAX_TEXT) return { error: `Keep the purpose under ${MAX_TEXT} characters.` }
   if (p.role === 'approver' && p.department === department) return { error: 'Choose a different office.' }
@@ -29,7 +32,7 @@ export async function book(input: { department: string; date: string; time: stri
     .in('status', ['Pending', 'Approved', 'Rescheduled'])
   if (count) return { error: 'You already have an open request for that slot.' }
   const { data, error } = await db.from('appointments')
-    .insert({ requester_id: p.id, requester_name: p.full_name, requester_email: p.email, requester_type: p.role, department, date, time, purpose })
+    .insert({ requester_id: p.id, requester_name: p.full_name, requester_email: p.email, requester_type: p.role, department, teacher_name: department === IT_DEPARTMENT ? teacher_name : null, date, time, purpose })
     .select().single()
   if (error || !data) return { error: 'Your appointment request was not saved. Please try again.' }
   await notify(data, 'pending review')
