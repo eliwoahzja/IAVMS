@@ -95,7 +95,7 @@ insert into public.departments (name) values ('Admission'), ('Registrar''s Offic
 
 insert into public.availability
 select d.name, w, t from public.departments d, generate_series(1,5) as w,
-  unnest(array['9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM']) as t;
+  unnest(array['9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM']) as t;
 
 create or replace function public.purge_expired_records(retention_months int default 24)
 returns table (visitors_removed bigint, emails_removed bigint)
