@@ -15,6 +15,7 @@ create table public.appointments (
   requester_email text not null,
   requester_type text not null,
   department text not null,
+  teacher_name text,
   date date not null,
   time text not null,
   purpose text not null,
@@ -55,6 +56,7 @@ create table public.email_log (
   created_at timestamptz not null default now()
 );
 
+alter table public.appointments add constraint appointments_teacher_scope_check check (teacher_name is null or (department = 'College of IT' and char_length(btrim(teacher_name)) between 1 and 120));
 alter table public.appointments add constraint appointment_purpose_length check (char_length(btrim(purpose)) between 1 and 500) not valid;
 alter table public.visitors add constraint visitor_name_length check (char_length(btrim(name)) between 1 and 120) not valid;
 alter table public.visitors add constraint visitor_purpose_length check (char_length(btrim(purpose)) between 1 and 500) not valid;
