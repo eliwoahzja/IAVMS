@@ -1,5 +1,14 @@
 import type { Role, Status } from './types'
 
+export const IT_DEPARTMENT = 'College of IT'
+export const IT_TEACHERS = [
+  'Ms. Juvy Ilustrisimo',
+  'Mr. Febrick Quiza',
+  'Mr. Dominick Intacto',
+  'Mr. Ralph Baga',
+  'Ms. Angelica Perioles',
+] as const
+
 export const SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM']
 export const WEEKDAYS = [{ n: 1, label: 'Mon' }, { n: 2, label: 'Tue' }, { n: 3, label: 'Wed' }, { n: 4, label: 'Thu' }, { n: 5, label: 'Fri' }]
 export const STATUSES: Status[] = ['Pending', 'Approved', 'Rescheduled', 'Rejected', 'Cancelled']
