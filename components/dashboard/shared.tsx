@@ -50,8 +50,8 @@ export function Metric({ label, value, tone: t }: { label: string; value: number
 
 export function ApptRow({ a, i = 0, actions }: { a: Appt; i?: number; actions?: React.ReactNode }) {
   return <div className="request-row" style={{ '--i': Math.min(i, 8) } as React.CSSProperties}><span className={`avatar avatar-${tone(a.id)}`}>{initials(a.requester_name)}</span>
-    <span className="request-person"><strong>{a.requester_name}</strong><span>{TYPE_LABEL[a.requester_type] ?? a.requester_type} · {code(a.id)}</span><span className="request-meta">{day(a.date)} · {a.time} · {a.department}</span></span>
-    <span className="request-detail"><strong>{a.department}</strong><span>{day(a.date)} · {a.time}</span><span>{a.purpose}</span></span>
+    <span className="request-person"><strong>{a.requester_name}</strong><span>{TYPE_LABEL[a.requester_type] ?? a.requester_type} · {code(a.id)}</span><span className="request-meta">{day(a.date)} · {a.time} · {a.department}{a.teacher_name ? ` · ${a.teacher_name}` : ''}</span></span>
+    <span className="request-detail"><strong>{a.department}</strong><span>{day(a.date)} · {a.time}</span>{a.teacher_name && <span>Teacher: {a.teacher_name}</span>}<span>{a.purpose}</span></span>
     <span className={`status-pill status-${a.status.toLowerCase()}`}><span />{a.status}</span>
     {actions && <span className="row-actions">{actions}</span>}</div>
 }
