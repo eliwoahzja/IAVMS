@@ -10,7 +10,7 @@ import type { Role } from '@/lib/types'
 export async function slotStates(department: string, date: string) {
   return getSlots(department, date)
 }
-export async function book(input: { department: string; date: string; time: string; purpose: string }) {
+export async function book(input: { department: string; teacher_name?: string | null; date: string; time: string; purpose: string }) {
   return submitBooking(input)
 }
 export async function decide(id: number, action: 'approve' | 'reject' | 'reschedule', to?: { date: string; time: string }) {
