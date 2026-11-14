@@ -1,7 +1,7 @@
 import { code, day } from '../constants'
 import { appointmentEmailHtml, type AppointmentEmailHtml } from './html'
 
-export type Mailable = { id: number; requester_email: string; requester_name: string; department: string; date: string; time: string }
+export type Mailable = { id: number; requester_email: string; requester_name: string; department: string; teacher_name?: string | null; date: string; time: string }
 
 const EVENTS: Record<string, { subject: string; message: string }> = {
   'pending review': { subject: 'Request received', message: 'Your request has been sent to the office for review. It is not confirmed yet.' },
@@ -30,6 +30,7 @@ export function requesterMessage(a: Mailable, event: string) {
       '',
       `Reference: ${code(a.id)}`,
       `Office: ${a.department}`,
+      ...(a.teacher_name ? [`Teacher: ${a.teacher_name}`] : []),
       `Date: ${day(a.date)}`,
       `Time: ${a.time}`,
       '',
@@ -44,6 +45,7 @@ export function requesterMessage(a: Mailable, event: string) {
       message: details.message,
       reference: code(a.id),
       office: a.department,
+      teacher: a.teacher_name ?? undefined,
       date: day(a.date),
       time: a.time,
       status: EVENT_STATUS[event] ?? 'updated',
@@ -60,6 +62,7 @@ export function approverMessage(a: Mailable) {
       '',
       `Reference: ${code(a.id)}`,
       `Office: ${a.department}`,
+      ...(a.teacher_name ? [`Teacher: ${a.teacher_name}`] : []),
       `Requested date: ${day(a.date)}`,
       `Requested time: ${a.time}`,
       '',
@@ -74,6 +77,7 @@ export function approverMessage(a: Mailable) {
       message: 'A new appointment request has been submitted to your office. Review the details and decide whether to approve or decline it.',
       reference: code(a.id),
       office: a.department,
+      teacher: a.teacher_name ?? undefined,
       date: day(a.date),
       time: a.time,
       status: 'pending',
