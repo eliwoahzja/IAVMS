@@ -1,6 +1,6 @@
-import { CalendarDays, ClipboardCheck, Clock3, FileText, Grid2X2, LayoutDashboard, Settings, UsersRound } from 'lucide-react'
+import { CalendarDays, ClipboardCheck, Clock3, FileText, Grid2X2, LayoutDashboard, Settings, UsersRound, ShieldCheck } from 'lucide-react'
 
-export type Tab = 'Summary' | 'Appointments' | 'Visitors' | 'Availability' | 'Reports' | 'Offices' | 'Email log' | 'Users'
+export type Tab = 'Summary' | 'Appointments' | 'Visitors' | 'Availability' | 'Reports' | 'Offices' | 'Email log' | 'Users' | 'Access requests'
 export type Group = 'requester' | 'approver' | 'admin'
 
 export const TABS: { id: Tab; icon: typeof Clock3; who: Group[] }[] = [
@@ -12,6 +12,7 @@ export const TABS: { id: Tab; icon: typeof Clock3; who: Group[] }[] = [
   { id: 'Offices', icon: Grid2X2, who: ['admin'] },
   { id: 'Email log', icon: ClipboardCheck, who: ['admin'] },
   { id: 'Users', icon: Settings, who: ['admin'] },
+  { id: 'Access requests', icon: ShieldCheck, who: ['admin'] },
 ]
 export const INTRO: Record<Tab, string> = {
   Summary: 'Review pending decisions, confirmed appointments and visitor activity.',
@@ -22,6 +23,7 @@ export const INTRO: Record<Tab, string> = {
   Offices: 'Manage the offices that accept appointment requests.',
   'Email log': 'Check whether appointment emails were accepted, skipped or failed.',
   Users: 'Assign account roles, choose department approvers and manage visitor access.',
+  'Access requests': 'Review student, faculty and visitor identities before granting accounts.',
 }
 
 export const TAB_TITLE: Record<Tab, string> = {
@@ -33,4 +35,5 @@ export const TAB_TITLE: Record<Tab, string> = {
   Offices: 'Offices',
   'Email log': 'Email delivery',
   Users: 'Users',
+  'Access requests': 'Access requests',
 }
