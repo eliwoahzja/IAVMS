@@ -18,8 +18,12 @@ export async function setUserRole(userId: string, role: Role, department: string
 export async function setAuthorized(userId: string, on: boolean): Promise<R> {
   const p = await me()
   if (p.role !== 'admin') return { error: 'Your account does not have permission for this action.' }
+  if (userId === p.id) return { error: 'You cannot change your own access.' }
+  const { data: target, error: targetError } = await admin().from('profiles').select('role').eq('id', userId).maybeSingle()
+  if (targetError || !target) return { error: 'Account not found.' }
+  if (target.role === 'admin') return { error: 'Administrator access cannot be changed from here.' }
   const { error } = await admin().from('profiles').update({ authorized: on }).eq('id', userId)
-  if (error) return { error: 'Visitor access was not updated. Please try again.' }
+  if (error) return { error: 'Account access was not updated. Please try again.' }
   revalidatePath('/')
   return {}
 }
