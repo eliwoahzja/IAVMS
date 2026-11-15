@@ -83,8 +83,8 @@ then assigns the approver role and office in **Users**.
 
 ## Administrator-approved account requests
 
-The existing email and password login remains available. First-time users choose **Request access**,
-enter their name, email, role and school ID (students and faculty), and wait for administrator approval.
+The existing email and password login remains available. First-time users choose **Activate account**,
+enter their name, email twice, role and school ID (students and faculty), and wait for administrator approval.
 Requests are stored in `account_requests` with RLS enabled and no public table grants. Administrators
 must verify the applicant's identity against official school records before approving. An email address
 or self-entered ID is not enrollment proof.
@@ -96,15 +96,13 @@ If email transport fails, the request stays pending for retry; a created invited
 Approval uses the service-role key only in server actions, never in the browser.
 
 Set `APP_URL` in `.env.local` to the trusted, reachable origin of the app. For example, on the same
-development device use `APP_URL=http://localhost:3000`. Other recipients cannot open localhost on your
-device: use an authorized HTTPS deployment and its URL for real email activation. Add
-`https://your-deployment.example/auth/callback` to Supabase Authentication redirect allow list.
-
-Google login is an optional second method. Enable the Google provider in Supabase Authentication,
-configure OAuth credentials, and allow `APP_URL/auth/callback` as a redirect. New OAuth identities
-remain unauthorized until an administrator verifies them. Old authenticated accounts keep their
-existing passwords and roles. The school portal's existing login is a separate identity system,
-not automatically connected to SPCC Pass.
+development device use `APP_URL=http://localhost:3000`. Recipients on a different device cannot
+open localhost on your device. For email activation outside your computer, use a reachable
+HTTPS domain such as a deployment you control, configured as `APP_URL`, and allow that
+site URL in Supabase Authentication settings. The activation handler is `/auth/confirm`.
+This app uses email/password authentication and administrator-approved activation.
+It does not use Google OAuth. SPCC Student Portal credentials are separate from IAVMS credentials
+unless an authorized institutional integration is configured.
 
 For a publicly deployed version, add CAPTCHA and edge rate limiting to the unauthenticated
 access-request form before accepting untrusted high-volume traffic.
