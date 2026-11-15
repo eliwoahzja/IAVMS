@@ -4,7 +4,8 @@ import { slotStates as getSlots, book as submitBooking, decide as decideBooking,
 import { registerVisitor as createVisitor, markVisit as updateVisitor } from '@/lib/actions/visitors'
 import { toggleSlot as setSlot, blockSlot as closeSlot, unblockSlot as openSlot, saveOffice as updateOffice } from '@/lib/actions/offices'
 import { setUserRole as updateRole, setAuthorized as updateAuthorization, deleteAccount as removeAccount } from '@/lib/actions/users'
-import { signIn as performSignIn, signUp as performSignUp, signOut as performSignOut } from '@/lib/actions/auth'
+import { signIn as performSignIn, signUp as performSignUp, signOut as performSignOut, googleSignIn as performGoogleSignIn, setPassword as performSetPassword } from '@/lib/actions/auth'
+import { reviewAccess } from '@/lib/actions/access-requests'
 import type { Role } from '@/lib/types'
 
 export async function slotStates(department: string, date: string) {
@@ -54,4 +55,14 @@ export async function signUp(fd: FormData) {
 }
 export async function signOut() {
   return performSignOut()
+}
+
+export async function googleSignIn() {
+  return performGoogleSignIn()
+}
+export async function setPassword(fd: FormData) {
+  return performSetPassword(fd)
+}
+export async function reviewAccessRequest(id: string, action: 'approve' | 'reject') {
+  return reviewAccess(id, action)
 }
