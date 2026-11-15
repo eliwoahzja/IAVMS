@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { signIn, signUp } from '@/app/actions'
+import { signIn, signUp, googleSignIn } from '@/app/actions'
 import { PasswordField, Submit } from '@/components/auth-bits'
 
 export type AuthMode = 'signin' | 'signup'
@@ -29,9 +29,9 @@ export function AuthSlider({ initialMode, error, msg }: {
 
   return (
     <div className="auth-slider" data-mode={mode}>
-      <div className="auth-mode-toggle" role="group" aria-label="Sign in or create an account">
+      <div className="auth-mode-toggle" role="group" aria-label="Sign in or request access">
         <button type="button" className="auth-mode-tab" aria-pressed={!up} onClick={() => go('signin')}>Sign in</button>
-        <button type="button" className="auth-mode-tab" aria-pressed={up} onClick={() => go('signup')}>Create account</button>
+        <button type="button" className="auth-mode-tab" aria-pressed={up} onClick={() => go('signup')}>Request access</button>
       </div>
 
       <section className="auth-panel auth-panel-signin" inert={up} aria-label="Sign in">
@@ -46,16 +46,22 @@ export function AuthSlider({ initialMode, error, msg }: {
             <PasswordField id="signin-password" autoComplete="current-password" />
             <Submit label="Sign in" pendingLabel="Signing in..." />
           </form>
+          <div className="auth-divider"><span>or continue with</span></div>
+          <form action={googleSignIn}>
+            <button type="submit" className="auth-google-button"><span className="auth-google-mark" aria-hidden="true">G</span>Continue with Google</button>
+          </form>
+          <p className="auth-footnote">New users need administrator approval before booking.</p>
         </div>
       </section>
 
       <section className="auth-panel auth-panel-signup" inert={!up} aria-label="Create account">
         <div className="auth-panel-inner">
-          <h1>Create account</h1>
-          <p className="auth-panel-sub">For SPCC students, faculty and external visitors requesting an appointment.</p>
+          <h1>Request account access</h1>
+          <p className="auth-panel-sub">Submit your details for school verification. No password is required until an administrator approves your request.</p>
           {up && notice.error && <p className="auth-note auth-error" role="alert">{notice.error}</p>}
           {up && notice.msg && <p className="auth-note" role="status">{notice.msg}</p>}
           <form action={signUp}>
+            <input className="auth-honeypot" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
             <fieldset className="field-set">
               <legend className="field-legend">Your details</legend>
               <div className="field-pair">
@@ -78,15 +84,16 @@ export function AuthSlider({ initialMode, error, msg }: {
               </select>
             </fieldset>
             <fieldset className="field-set">
-              <legend className="field-legend">Account access</legend>
-              <label className="field-label" htmlFor="signup-email">Email</label>
+              <legend className="field-legend">Verification information</legend>
+              <label className="field-label" htmlFor="signup-email">Personal or school email</label>
               <input id="signup-email" name="email" type="email" required autoComplete="email" className="field-input" />
-              <PasswordField id="signup-password" autoComplete="new-password" minLength={8} />
+              <label className="field-label" htmlFor="signup-school-id">Student or faculty ID <span className="field-label-note">Required for SPCC students and faculty</span></label>
+              <input id="signup-school-id" name="school_id" type="text" maxLength={60} className="field-input" placeholder="Student ID or faculty ID (if applicable)" />
               <label className="auth-consent">
                 <input type="checkbox" name="consent" required />
-                <span>I agree that SPCC collects my name, email and appointment details to schedule visits (Data Privacy Act of 2012, RA 10173).</span>
+                <span>I agree that SPCC collects my name, email, requested account type and school ID for identity verification and appointment access (Data Privacy Act of 2012, RA 10173).</span>
               </label>
-              <Submit label="Create account" pendingLabel="Creating account..." />
+              <Submit label="Submit access request" pendingLabel="Submitting request..." />
             </fieldset>
           </form>
         </div>
@@ -104,7 +111,7 @@ export function AuthSlider({ initialMode, error, msg }: {
             <h2>Arrange your visit to an SPCC office</h2>
             <p>Choose an office and available time. The assigned staff member reviews your request before it is confirmed.</p>
             <button type="button" className="auth-ghost" onClick={() => go('signup')}>
-              Create an account <ArrowRight />
+              Request account access <ArrowRight />
             </button>
           </div>
           <div className="auth-overlay-panel auth-overlay-back" inert={!up}>
