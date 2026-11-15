@@ -9,3 +9,4 @@ export type MailRow = { id: number; appointment_id: number | null; to_email: str
 export type SlotInfo = { time: string; state: 'open' | 'held' | 'booked' | 'closed' }
 export type R = { error?: string }
 export type Dept = { name: string; active: boolean }
+export type AccountRequest = { id: string; email: string; full_name: string; requested_role: 'student' | 'faculty' | 'visitor'; school_id: string | null; status: 'pending' | 'approved' | 'rejected'; created_at: string }
