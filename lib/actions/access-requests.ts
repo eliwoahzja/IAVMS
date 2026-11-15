@@ -56,12 +56,12 @@ export async function reviewAccess(id: string, action: 'approve' | 'reject'): Pr
     const token = encodeURIComponent(data.properties.hashed_token)
     link = base + '/auth/confirm?type=' + kind + '&token_hash=' + token
     subject = 'SPCC Pass: Activate your approved account'
-    message = 'Your account request was approved. Open the secure link below to set your own password: ' + link + '\nThe link is private and expires automatically.'
+    message = 'Your activation request was approved. Open the secure link below to set your own password: ' + link + '\nThe link is private and expires automatically.'
   }
 
   if (!userId) return { error: 'No account was found.' }
   const safe = (value: string) => value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] ?? ch))
-  const html = '<div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:24px"><h2 style="color:#07095f">SPCC Pass</h2><p>Hello ' + safe(req.full_name) + ',</p><p>Your account request was approved by an administrator.</p>' + (link ? '<p><a href="' + safe(link) + '" style="display:inline-block;padding:12px 20px;background:#07095f;color:white;border-radius:8px;text-decoration:none">Activate account and set password</a></p>' : '<p>Use your existing login or linked Google account to sign in.</p>') + '<p style="color:#555">If you did not request access, contact the school.</p></div>'
+  const html = '<div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:24px"><h2 style="color:#07095f">SPCC Pass</h2><p>Hello ' + safe(req.full_name) + ',</p><p>Your account request was approved by an administrator.</p>' + (link ? '<p><a href="' + safe(link) + '" style="display:inline-block;padding:12px 20px;background:#07095f;color:white;border-radius:8px;text-decoration:none">Activate account and set password</a></p>' : '<p>Use your existing email and password to sign in.</p>') + '<p style="color:#555">If you did not request access, contact the school.</p></div>'
   const delivery = await send(req.email, subject, message, html)
   if (delivery.status !== 'sent') return { error: 'Activation email was not accepted (' + delivery.status + '). Check Maileroo SMTP settings and retry approval.' }
 
