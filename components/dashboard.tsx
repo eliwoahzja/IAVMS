@@ -11,7 +11,8 @@ import { ModalBox } from '@/components/dashboard/modal'
 import { Wizard, Review } from '@/components/dashboard/appointments'
 import { VisitorForm } from '@/components/dashboard/visitors'
 import { Availability, Offices, UserRow } from '@/components/dashboard/administration'
-import type { Appt, Avail, Block, Dept, MailRow, Profile, Status, Visitor } from '@/lib/types'
+import { AccessRequests } from '@/components/dashboard/access-requests'
+import type { AccountRequest, Appt, Avail, Block, Dept, MailRow, Profile, Status, Visitor } from '@/lib/types'
 
 type Modal = null | 'book' | 'visitor' | { review: Appt }
 
@@ -27,9 +28,9 @@ function usePending(active: boolean, delay = 140) {
 
 const stamp = (iso: string) => new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })
 
-type Props = { profile: Profile; appts: Appt[]; visitors: Visitor[]; avail: Avail[]; blocks: Block[]; users: Profile[]; emails: MailRow[]; departments: Dept[]; today: string }
+type Props = { profile: Profile; appts: Appt[]; visitors: Visitor[]; avail: Avail[]; blocks: Block[]; users: Profile[]; emails: MailRow[]; departments: Dept[]; accessRequests: AccountRequest[]; today: string }
 
-export function Dashboard({ profile, appts, visitors, avail, blocks, users, emails, departments, today }: Props) {
+export function Dashboard({ profile, appts, visitors, avail, blocks, users, emails, departments, accessRequests, today }: Props) {
   const group: Group = profile.role === 'admin' ? 'admin' : profile.role === 'approver' ? 'approver' : 'requester'
   const staff = group !== 'requester'
   const depts = departments.filter((d) => d.active).map((d) => d.name)
@@ -110,7 +111,7 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
     <aside ref={sidebar} id="app-sidebar" inert={isMobile && !menuOpen} className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
       <div className="brand-lockup"><img className="brand-seal" src="/seal.png" alt="" width={38} height={38} /><div><p className="brand-name">SPCC</p><p className="brand-subtitle">Caloocan campus</p></div><button ref={closeButton} className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close navigation"><X /></button></div>
       <nav className="main-nav" aria-label="Main navigation">
-        {tabs.map(({ id, icon: Icon }) => <button key={id} type="button" className={`nav-item ${tab === id ? 'nav-item-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setMenuOpen(false) }}><Icon /><span>{id === 'Appointments' && group === 'requester' ? 'My appointments' : TAB_TITLE[id]}</span>{id === 'Appointments' && staff && count('Pending') > 0 && <b>{count('Pending')}</b>}</button>)}
+        {tabs.map(({ id, icon: Icon }) => <button key={id} type="button" className={`nav-item ${tab === id ? 'nav-item-active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setMenuOpen(false) }}><Icon /><span>{id === 'Appointments' && group === 'requester' ? 'My appointments' : TAB_TITLE[id]}</span>{id === 'Appointments' && staff && count('Pending') > 0 && <b>{count('Pending')}</b>}{id === 'Access requests' && accessRequests.some(r => r.status === 'pending') && <b>{accessRequests.filter(r => r.status === 'pending').length}</b>}</button>)}
       </nav>
       <div className="sidebar-bottom">
         <div className="user-card">
@@ -159,6 +160,8 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
         {tab === 'Offices' && <Offices departments={departments} run={run} busy={busy} refreshing={refreshing} />}
 
         {tab === 'Email log' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={3} label="Refreshing the email log" /> : emails.length ? emails.map((m) => <div className="request-row" key={m.id}><span className="request-person"><strong>{m.appointment_id ? code(m.appointment_id) : 'No reference'}: {m.event}</strong><span>{m.to_email}</span></span><span className="request-detail"><strong>{m.status}</strong><span>{m.detail || stamp(m.created_at)}</span></span></div>) : <p className="empty-copy">No appointment emails have been logged yet.</p>}</div></div>}
+
+        {tab === 'Access requests' && <AccessRequests requests={accessRequests} run={run} busy={busy} />}
 
         {tab === 'Users' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(users.length, 2), 6)} label="Refreshing the user list" /> : users.map((u) => <UserRow key={u.id} u={u} self={u.id === profile.id} depts={depts} run={run} busy={busy} />)}</div></div>}
       </div>
