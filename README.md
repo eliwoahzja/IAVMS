@@ -11,7 +11,7 @@ and a configurable SMTP or Resend email transport.
 2. Copy `.env.example` to `.env.local`, or add the same variables in Vercel:
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
    `EMAIL_PROVIDER`, SMTP settings or `RESEND_API_KEY`, and `EMAIL_FROM`.
-3. Register an account in the app. Sign-up only creates requesters; grant staff access with:
+3. Students, faculty and visitors submit an access request instead of creating credentials immediately. Administrators review identity and approve the request in the **Access requests** tab. Grant existing accounts staff access with:
 
 ```sql
 update public.profiles set role = 'admin' where email = 'you@spcc.ph';
@@ -73,13 +73,41 @@ Never expose `SMTP_PASS`, `SUPABASE_SERVICE_ROLE_KEY` or `RESEND_API_KEY` to the
 
 | Role | Created by | Can do |
 | --- | --- | --- |
-| Student, faculty member | Self sign-up | Submit requests, track status, view own history, cancel own open requests |
-| External visitor | Self sign-up, then authorized by an admin | Same as above, once authorized |
+| Student, faculty member | Account request, administrator verification, emailed activation link | Submit appointments, track status, view own history, cancel own open requests |
+| External visitor | Account request, administrator approval, emailed activation link | Same as above, once authorized |
 | Department approver | An admin, with an office assigned | Review, approve, reject and reschedule requests for that office; configure its slots; keep its visitor log |
 | Administrator | An admin | Every office, plus offices, users, reports and the email log |
 
-Approvers are not self-service: an account signs up as student, faculty or visitor, then an
-administrator assigns the approver role and office in **Users**.
+Approvers are not self-service: a school administrator first approves a requester account,
+then assigns the approver role and office in **Users**.
+
+## Administrator-approved account requests
+
+The existing email and password login remains available. First-time users choose **Request access**,
+enter their name, email, role and school ID (students and faculty), and wait for administrator approval.
+Requests are stored in `account_requests` with RLS enabled and no public table grants. Administrators
+must verify the applicant's identity against official school records before approving. An email address
+or self-entered ID is not enrollment proof.
+
+Approval creates a Supabase Auth invitation or approves an existing unauthorized account. The activation
+email uses the existing `EMAIL_PROVIDER` transport (SMTP Maileroo or Resend). The user sets their own
+password through a time-limited link and then signs in. **Never send plaintext passwords by email.**
+If email transport fails, the request stays pending for retry; a created invited account remains unauthorized.
+Approval uses the service-role key only in server actions, never in the browser.
+
+Set `APP_URL` in `.env.local` to the trusted, reachable origin of the app. For example, on the same
+development device use `APP_URL=http://localhost:3000`. Other recipients cannot open localhost on your
+device: use an authorized HTTPS deployment and its URL for real email activation. Add
+`https://your-deployment.example/auth/callback` to Supabase Authentication redirect allow list.
+
+Google login is an optional second method. Enable the Google provider in Supabase Authentication,
+configure OAuth credentials, and allow `APP_URL/auth/callback` as a redirect. New OAuth identities
+remain unauthorized until an administrator verifies them. Old authenticated accounts keep their
+existing passwords and roles. The school portal's existing login is a separate identity system,
+not automatically connected to SPCC Pass.
+
+For a publicly deployed version, add CAPTCHA and edge rate limiting to the unauthenticated
+access-request form before accepting untrusted high-volume traffic.
 
 ## Appointment rules
 
