@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation'
 import { Dashboard } from '@/components/dashboard'
 import { DashboardSkeleton } from '@/components/dashboard-skeleton'
 import { rows } from '@/lib/db'
+import { admin } from '@/lib/supabase/admin'
 import { supabase } from '@/lib/supabase/server'
-import type { Appt, Avail, Block, Dept, MailRow, Profile, Visitor } from '@/lib/types'
+import type { AccountRequest, Appt, Avail, Block, Dept, MailRow, Profile, Visitor } from '@/lib/types'
 
 export default async function Page() {
   const sb = await supabase()
@@ -14,6 +15,7 @@ export default async function Page() {
   const { data } = await sb.from('profiles').select('*').eq('id', user.id).single()
   if (!data) redirect('/login')
   const profile = data as Profile
+  if (!profile.authorized) redirect('/access-pending')
 
   return <Suspense fallback={<DashboardSkeleton profile={profile} />}>
     <Workspace profile={profile} />
@@ -26,7 +28,7 @@ async function Workspace({ profile }: { profile: Profile }) {
   const isAdmin = profile.role === 'admin'
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
-  const [appts, visitors, avail, blocks, users, emails, departments] = await Promise.all([
+  const [appts, visitors, avail, blocks, users, emails, departments, accessRequests] = await Promise.all([
     rows<Appt>(sb.from('appointments').select('*').order('date').order('time')),
     staff ? rows<Visitor>(sb.from('visitors').select('*').order('created_at', { ascending: false })) : Promise.resolve([] as Visitor[]),
     staff ? rows<Avail>(sb.from('availability').select('*')) : Promise.resolve([] as Avail[]),
@@ -34,6 +36,7 @@ async function Workspace({ profile }: { profile: Profile }) {
     isAdmin ? rows<Profile>(sb.from('profiles').select('*').order('created_at')) : Promise.resolve([] as Profile[]),
     isAdmin ? rows<MailRow>(sb.from('email_log').select('*').order('created_at', { ascending: false }).limit(50)) : Promise.resolve([] as MailRow[]),
     rows<Dept>(sb.from('departments').select('*').order('name')),
+    isAdmin ? rows<AccountRequest>(admin().from('account_requests').select('*').order('created_at', { ascending: false })) : Promise.resolve([] as AccountRequest[]),
   ])
-  return <Dashboard profile={profile} appts={appts} visitors={visitors} avail={avail} blocks={blocks} users={users} emails={emails} departments={departments} today={today} />
+  return <Dashboard profile={profile} appts={appts} visitors={visitors} avail={avail} blocks={blocks} users={users} emails={emails} departments={departments} accessRequests={accessRequests} today={today} />
 }
