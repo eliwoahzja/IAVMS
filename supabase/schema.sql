@@ -5,9 +5,26 @@ create table public.profiles (
   email text not null,
   role text not null default 'student' check (role in ('student','faculty','visitor','approver','admin')),
   department text,
-  authorized boolean not null default true,
+  authorized boolean not null default false,
   created_at timestamptz not null default now()
 );
+create table public.account_requests (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  full_name text not null,
+  requested_role text not null check (requested_role in ('student','faculty','visitor')),
+  school_id text,
+  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  linked_user_id uuid references auth.users(id) on delete set null,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint account_request_email_length check (char_length(email) between 5 and 254),
+  constraint account_request_name_length check (char_length(btrim(full_name)) between 2 and 160),
+  constraint account_request_school_id_length check (school_id is null or char_length(btrim(school_id)) between 2 and 60)
+);
+create unique index account_requests_email_unique on public.account_requests (lower(email));
+create index account_requests_status_created on public.account_requests (status, created_at desc);
 create table public.appointments (
   id bigint generated always as identity primary key,
   requester_id uuid not null references public.profiles(id) on delete cascade,
@@ -65,9 +82,11 @@ alter table public.profiles add constraint profile_name_length check (char_lengt
 create function public.handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, full_name, email, role, authorized)
-  values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''), new.email,
+  values (new.id,
+    coalesce(nullif(btrim(new.raw_user_meta_data->>'full_name'), ''), split_part(new.email,'@',1)),
+    new.email,
     case when new.raw_user_meta_data->>'type' in ('student','faculty','visitor') then new.raw_user_meta_data->>'type' else 'student' end,
-    coalesce(new.raw_user_meta_data->>'type', '') <> 'visitor');
+    false);
   return new;
 end $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
@@ -76,6 +95,9 @@ create function public.my_role() returns text language sql stable security defin
 create function public.my_dept() returns text language sql stable security definer set search_path = public as $$ select department from public.profiles where id = auth.uid() $$;
 
 alter table public.profiles enable row level security;
+alter table public.account_requests enable row level security;
+revoke all on public.account_requests from public, anon, authenticated;
+grant select, insert, update on public.account_requests to service_role;
 alter table public.appointments enable row level security;
 alter table public.visitors enable row level security;
 alter table public.availability enable row level security;
