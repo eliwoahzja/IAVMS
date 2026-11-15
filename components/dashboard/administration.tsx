@@ -64,7 +64,7 @@ export function UserRow({ u, self, depts, run, busy }: { u: Profile; self: boole
     <span className="request-person"><strong>{u.full_name || 'Name not provided'}</strong><span>{u.email}</span></span>
     <span className="request-detail user-detail"><select aria-label={`Role for ${u.email}`} className="field-input" value={role} disabled={self || busy} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
       {role === 'approver' && <select aria-label={`Office for ${u.email}`} className="field-input" value={dept} disabled={self || busy} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>}</span>
-    <span className="row-actions">{u.role === 'visitor' && <BusyButton label={u.authorized ? 'Revoke' : 'Authorize'} disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Visitor authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</BusyButton>}<BusyButton label="Save changes" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'Account permissions updated')}>Save changes</BusyButton>
+    <span className="row-actions">{!self && u.role !== 'admin' && <BusyButton label={u.authorized ? 'Revoke' : 'Authorize'} disabled={busy} onClick={() => run(() => setAuthorized(u.id, !u.authorized), u.authorized ? 'Access revoked' : 'Account authorized')}>{u.authorized ? 'Revoke' : 'Authorize'}</BusyButton>}<BusyButton label="Save changes" disabled={!changed || busy} onClick={() => run(() => setUserRole(u.id, role, dept), 'Account permissions updated')}>Save changes</BusyButton>
       {!self && <button type="button" className={`secondary-button${confirmDelete ? '' : ' danger'}`} disabled={busy} aria-expanded={confirmDelete} onClick={() => confirmDelete ? closeDelete() : setConfirmDelete(true)}>{confirmDelete ? 'Keep account' : 'Delete account'}</button>}</span>
     {confirmDelete && <div className="account-delete-confirm" role="group" aria-label={`Confirm deletion of ${u.email}`}>
       <p>Delete this account, its appointments, and associated records permanently. Type <strong>{u.email}</strong> to confirm.</p>
@@ -92,7 +92,7 @@ export function Offices({ departments, run, busy, refreshing }: { departments: D
         <input id="o-name" className="field-input" placeholder="Office name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && name.trim() && !busy) add() }} />
         <BusyButton label="Add office" className="primary-button" disabled={!name.trim() || busy} onClick={add}>Add office</BusyButton>
       </div>
-      <p className="muted-note">New offices start with appointment slots at 9, 10 and 11 AM, and 1, 2 and 3 PM, Monday to Friday.</p>
+      <p className="muted-note">New offices start with appointment slots at 9, 10 and 11 AM, and 1, 2, 3, 4 and 5 PM, Monday to Friday.</p>
     </div>
   </div>
 }
