@@ -43,7 +43,7 @@ export async function reviewAccess(id: string, action: 'approve' | 'reject'): Pr
   let subject = 'SPCC Pass: Account approved'
   let message = 'Your SPCC Pass account has been approved. Sign in with your existing account credentials at ' + base + '/login'
 
-  if (!profile || req.linked_user_id) {
+  if (!profile || !profile.authorized) {
     const kind = userId ? 'recovery' : 'invite'
     const { data, error } = kind === 'invite'
       ? await db.auth.admin.generateLink({ type: 'invite', email: req.email, options: { data: { full_name: req.full_name, type: req.requested_role } } })
