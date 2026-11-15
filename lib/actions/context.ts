@@ -16,6 +16,7 @@ export async function me(): Promise<Profile> {
   if (!user) redirect('/login')
   const { data } = await sb.from('profiles').select('*').eq('id', user.id).single()
   if (!data) redirect('/login')
+  if (!data.authorized) redirect('/access-pending')
   return data as Profile
 }
 export const isStaff = (p: Profile) => p.role === 'admin' || p.role === 'approver'
