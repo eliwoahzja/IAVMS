@@ -761,3 +761,17 @@ h1, h2 { text-wrap: balance; }
   .account-delete-controls { flex-direction: column; align-items: stretch; }
   .account-delete-controls .field-input { flex: auto; width: 100%; max-width: none; }
 }
+
+.auth-divider { display: flex; align-items: center; gap: 12px; margin-top: 17px; color: var(--muted-foreground); font-size: .75rem; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--g80); }
+.auth-google-button { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; margin-top: 14px; border: 1px solid var(--g74); border-radius: 12px; color: var(--ink); background: #fff; font-size: .9375rem; font-weight: 650; }
+.auth-google-button:hover { background: var(--g98); border-color: var(--g44); }
+.auth-google-mark { font-size: 1.2rem; font-weight: 700; color: #4285f4; }
+.auth-footnote { margin-top: 14px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.55; }
+.auth-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; opacity: 0; }
+.auth-reset-card { box-sizing: border-box; width: min(480px, 100%); margin: 0 auto; padding: 32px; border-radius: 24px; background: #fff; box-shadow: 0 20px 60px rgba(3,4,40,.3); }
+.auth-reset-card h1 { margin: 0 0 12px; color: var(--ink); font-size: 1.5rem; }
+.auth-reset-card p { font-size: .875rem; line-height: 1.6; color: var(--muted-foreground); }
+.auth-reset-card .field-label { margin: 14px 0 6px; display: block; }
+.auth-reset-card .field-input { box-sizing: border-box; }
+@media (max-width: 480px) { .auth-reset-card { padding: 24px 20px; } }
