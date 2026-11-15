@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { signIn, signUp, googleSignIn } from '@/app/actions'
+import { signIn, requestActivation } from '@/app/actions'
 import { PasswordField, Submit } from '@/components/auth-bits'
 
-export type AuthMode = 'signin' | 'signup'
+export type AuthMode = 'signin' | 'activate'
 
-const URL_FOR: Record<AuthMode, string> = { signin: '/login', signup: '/signup' }
+const URL_FOR: Record<AuthMode, string> = { signin: '/login', activate: '/activate' }
 
 export function AuthSlider({ initialMode, error, msg }: {
   initialMode: AuthMode
@@ -16,7 +16,7 @@ export function AuthSlider({ initialMode, error, msg }: {
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode)
   const [notice, setNotice] = useState<{ error?: string; msg?: string }>({ error, msg })
-  const up = mode === 'signup'
+  const up = mode === 'activate'
 
   function go(next: AuthMode) {
     if (next === mode) return
@@ -29,9 +29,9 @@ export function AuthSlider({ initialMode, error, msg }: {
 
   return (
     <div className="auth-slider" data-mode={mode}>
-      <div className="auth-mode-toggle" role="group" aria-label="Sign in or request access">
+      <div className="auth-mode-toggle" role="group" aria-label="Sign in or activate an account">
         <button type="button" className="auth-mode-tab" aria-pressed={!up} onClick={() => go('signin')}>Sign in</button>
-        <button type="button" className="auth-mode-tab" aria-pressed={up} onClick={() => go('signup')}>Request access</button>
+        <button type="button" className="auth-mode-tab" aria-pressed={up} onClick={() => go('activate')}>Activate account</button>
       </div>
 
       <section className="auth-panel auth-panel-signin" inert={up} aria-label="Sign in">
@@ -46,24 +46,23 @@ export function AuthSlider({ initialMode, error, msg }: {
             <PasswordField id="signin-password" autoComplete="current-password" />
             <Submit label="Sign in" pendingLabel="Signing in..." />
           </form>
-          <div className="auth-divider"><span>or continue with</span></div>
-          <form action={googleSignIn}>
-            <button type="submit" className="auth-google-button"><span className="auth-google-mark" aria-hidden="true">G</span>Continue with Google</button>
-          </form>
-          <p className="auth-footnote">New users need administrator approval before booking.</p>
+          <div className="auth-activate-link">
+            <span>First time using SPCC Pass?</span>
+            <button type="button" className="auth-activate-button" onClick={() => go('activate')}>Activate your account <ArrowRight size={17} /></button>
+          </div>
         </div>
       </section>
 
-      <section className="auth-panel auth-panel-signup" inert={!up} aria-label="Create account">
+      <section className="auth-panel auth-panel-activate" inert={!up} aria-label="Activate account">
         <div className="auth-panel-inner">
-          <h1>Request account access</h1>
-          <p className="auth-panel-sub">Submit your details for school verification. No password is required until an administrator approves your request.</p>
+          <h1>Activate your account</h1>
+          <p className="auth-panel-sub">Verify your identity with SPCC. Once approved, you'll receive a secure email to set your password.</p>
           {up && notice.error && <p className="auth-note auth-error" role="alert">{notice.error}</p>}
           {up && notice.msg && <p className="auth-note" role="status">{notice.msg}</p>}
-          <form action={signUp}>
+          <form action={requestActivation}>
             <input className="auth-honeypot" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
             <fieldset className="field-set">
-              <legend className="field-legend">Your details</legend>
+              <legend className="field-legend">Identity details</legend>
               <div className="field-pair">
                 <div>
                   <label className="field-label" htmlFor="signup-last">Last name</label>
@@ -76,7 +75,7 @@ export function AuthSlider({ initialMode, error, msg }: {
               </div>
               <label className="field-label" htmlFor="signup-middle">Middle name<span className="field-label-note">Optional</span></label>
               <input id="signup-middle" name="middle_name" maxLength={60} autoComplete="additional-name" className="field-input" />
-              <label className="field-label" htmlFor="signup-type">Signing up as</label>
+              <label className="field-label" htmlFor="signup-type">Account type</label>
               <select id="signup-type" name="type" className="field-input" required defaultValue="student">
                 <option value="student">Student</option>
                 <option value="faculty">Faculty member</option>
@@ -84,16 +83,19 @@ export function AuthSlider({ initialMode, error, msg }: {
               </select>
             </fieldset>
             <fieldset className="field-set">
-              <legend className="field-legend">Verification information</legend>
-              <label className="field-label" htmlFor="signup-email">Personal or school email</label>
-              <input id="signup-email" name="email" type="email" required autoComplete="email" className="field-input" />
-              <label className="field-label" htmlFor="signup-school-id">Student or faculty ID <span className="field-label-note">Required for SPCC students and faculty</span></label>
-              <input id="signup-school-id" name="school_id" type="text" maxLength={60} className="field-input" placeholder="Student ID or faculty ID (if applicable)" />
+              <legend className="field-legend">Account verification</legend>
+              <label className="field-label" htmlFor="signup-email">Email address</label>
+              <input id="signup-email" name="email" type="email" required autoComplete="email" className="field-input" placeholder="Personal or SPCC email" />
+              <label className="field-label" htmlFor="signup-confirm-email">Confirm email address</label>
+              <input id="signup-confirm-email" name="confirm_email" type="email" required autoComplete="email" className="field-input" placeholder="Enter your email again" />
+              <label className="field-label" htmlFor="signup-school-id">School ID <span className="field-label-note">Required for students and faculty</span></label>
+              <input id="signup-school-id" name="school_id" type="text" maxLength={60} className="field-input" placeholder="Student number, LRN or faculty ID" />
+              <p className="auth-field-hint">Visitors may leave the school ID blank. Administrators verify submitted details before approval.</p>
               <label className="auth-consent">
                 <input type="checkbox" name="consent" required />
-                <span>I agree that SPCC collects my name, email, requested account type and school ID for identity verification and appointment access (Data Privacy Act of 2012, RA 10173).</span>
+                <span>I agree to the collection of my name, email, account type and school ID for identity verification and appointment access under RA 10173.</span>
               </label>
-              <Submit label="Submit access request" pendingLabel="Submitting request..." />
+              <Submit label="Request activation" pendingLabel="Submitting activation..." />
             </fieldset>
           </form>
         </div>
@@ -110,16 +112,16 @@ export function AuthSlider({ initialMode, error, msg }: {
             <p className="auth-overlay-kicker">Appointment requests</p>
             <h2>Arrange your visit to an SPCC office</h2>
             <p>Choose an office and available time. The assigned staff member reviews your request before it is confirmed.</p>
-            <button type="button" className="auth-ghost" onClick={() => go('signup')}>
-              Request account access <ArrowRight />
+            <button type="button" className="auth-ghost" onClick={() => go('activate')}>
+              Activate account <ArrowRight />
             </button>
           </div>
           <div className="auth-overlay-panel auth-overlay-back" inert={!up}>
-            <p className="auth-overlay-kicker">Existing account</p>
-            <h2>Check your appointments and requests</h2>
-            <p>Requesters track decisions. Department staff manage approvals and visit records.</p>
+            <p className="auth-overlay-kicker">Identity verification</p>
+            <h2>Activate your SPCC Pass access</h2>
+            <p>Submit your details for school verification. After approval, follow your activation email to set a password and sign in.</p>
             <button type="button" className="auth-ghost" onClick={() => go('signin')}>
-              Sign in <ArrowRight />
+              Back to sign in <ArrowRight />
             </button>
           </div>
         </div>
