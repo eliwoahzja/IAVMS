@@ -9,9 +9,9 @@ export async function notify(a: Mailable, event: string) {
 
 export async function notifyOffice(a: Mailable) {
   const db = admin()
-  const { data: assigned } = await db.from('profiles').select('email').eq('role', 'approver').eq('department', a.department)
+  const { data: assigned } = await db.from('profiles').select('email').eq('role', 'approver').eq('department', a.department).eq('authorized', true)
   const approvers = (assigned ?? []) as { email: string }[]
-  const { data: administrators } = approvers.length ? { data: [] as { email: string }[] } : await db.from('profiles').select('email').eq('role', 'admin')
+  const { data: administrators } = approvers.length ? { data: [] as { email: string }[] } : await db.from('profiles').select('email').eq('role', 'admin').eq('authorized', true)
   const recipients = [...new Set([...approvers, ...((administrators ?? []) as { email: string }[])].map((p) => p.email))]
   const message = approverMessage(a)
   for (const email of recipients) {
