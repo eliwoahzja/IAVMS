@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { springTo } from '@/lib/spring'
-import { TYPE_LABEL, code, day, initials, tone } from '@/lib/constants'
+import { TYPE_LABEL, code, day, initials, tone, submittedAt } from '@/lib/constants'
 import type { Appt, R } from '@/lib/types'
 
 export type Run = (fn: () => Promise<R>, ok: string) => void
@@ -48,9 +48,9 @@ export function Metric({ label, value, tone: t }: { label: string; value: number
   return <div className={`metric-card metric-${t}`}><strong className="metric-value"><CountUp value={value} /></strong><span className="metric-label">{label}</span></div>
 }
 
-export function ApptRow({ a, i = 0, actions }: { a: Appt; i?: number; actions?: React.ReactNode }) {
+export function ApptRow({ a, i = 0, actions, showSubmitted = false }: { a: Appt; i?: number; actions?: React.ReactNode; showSubmitted?: boolean }) {
   return <div className="request-row" style={{ '--i': Math.min(i, 8) } as React.CSSProperties}><span className={`avatar avatar-${tone(a.id)}`}>{initials(a.requester_name)}</span>
-    <span className="request-person"><strong>{a.requester_name}</strong><span>{TYPE_LABEL[a.requester_type] ?? a.requester_type} · {code(a.id)}</span><span className="request-meta">{day(a.date)} · {a.time} · {a.department}{a.teacher_name ? ` · ${a.teacher_name}` : ''}</span></span>
+    <span className="request-person"><strong>{a.requester_name}</strong><span>{TYPE_LABEL[a.requester_type] ?? a.requester_type} · {code(a.id)}</span><span className="request-meta">{day(a.date)} · {a.time} · {a.department}{a.teacher_name ? ` · ${a.teacher_name}` : ''}</span>{showSubmitted && <span className="request-meta">Submitted: {submittedAt(a.created_at)}</span>}</span>
     <span className="request-detail"><strong>{a.department}</strong><span>{day(a.date)} · {a.time}</span>{a.teacher_name && <span>Teacher: {a.teacher_name}</span>}<span>{a.purpose}</span></span>
     <span className={`status-pill status-${a.status.toLowerCase()}`}><span />{a.status}</span>
     {actions && <span className="row-actions">{actions}</span>}</div>
