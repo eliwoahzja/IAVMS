@@ -25,7 +25,7 @@ export const submittedAt = (iso: string) => {
   if (Number.isNaN(date.getTime())) return 'Not recorded'
   return new Intl.DateTimeFormat('en-PH', {
     timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3,
+    hour: 'numeric', minute: '2-digit',
   }).format(date)
 }
 export const initials = (name: string) => name.split(' ').filter(Boolean).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?'
