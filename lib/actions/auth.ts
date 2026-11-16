@@ -49,11 +49,22 @@ export async function requestActivation(fd: FormData) {
     requested_role: type,
     school_id: type === 'visitor' ? null : schoolId,
   })
-  if (error && error.code !== '23505') {
+  if (error?.code === '23505') {
+    const { error: retryError } = await admin().from('account_requests').update({
+      full_name, requested_role: type, school_id: type === 'visitor' ? null : schoolId,
+      status: 'pending', reviewed_by: null, reviewed_at: null,
+      created_at: new Date().toISOString(),
+    }).eq('email', email).eq('status', 'rejected')
+      .lt('created_at', new Date(Date.now() - 60000).toISOString())
+    if (retryError) {
+      console.error('Activation request update failed:', retryError.code)
+      back('/activate', 'error', 'Your request could not be updated. Contact the school administrator.')
+    }
+  } else if (error) {
     console.error('Account request failed:', error.code)
     back('/activate', 'error', 'Your request could not be submitted. Try again later.')
   }
-  back('/login', 'msg', 'Your activation request is pending administrator approval. Watch your inbox for an activation link.')
+  back('/login', 'msg', 'If your account needs review, the school administrator will process your activation request. Watch your inbox for an approval link.')
 }
 
 export async function setPassword(fd: FormData) {
