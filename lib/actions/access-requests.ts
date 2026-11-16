@@ -22,56 +22,88 @@ export async function reviewAccess(id: string, action: 'approve' | 'reject'): Pr
   if (reviewer.role !== 'admin') return { error: 'Only administrators review account requests.' }
   if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: 'Invalid request.' }
   const db = admin()
-  const { data: req, error: readError } = await db.from('account_requests').select('*').eq('id', id).eq('status', 'pending').maybeSingle()
-  if (readError) return { error: 'Could not load account request.' }
-  if (!req) return { error: 'This request has already been reviewed.' }
+
   if (action === 'reject') {
-    const { error } = await db.from('account_requests').update({ status: 'rejected', reviewed_by: reviewer.id, reviewed_at: new Date().toISOString() }).eq('id', id).eq('status', 'pending')
+    const { data, error } = await db.from('account_requests')
+      .update({ status: 'rejected', reviewed_by: reviewer.id, reviewed_at: new Date().toISOString() })
+      .eq('id', id).eq('status', 'pending').select('id').maybeSingle()
     if (error) return { error: 'Request was not rejected.' }
+    if (!data) return { error: 'Another administrator already started reviewing this request.' }
     revalidatePath('/')
     return {}
   }
+
   const base = origin()
-  if (!base) return { error: 'Set APP_URL to the reachable HTTPS address of this app before sending activation emails.' }
+  if (!base) return { error: 'Set APP_URL to a reachable HTTPS address for recipients outside your device.' }
+  const { data: req, error: claimError } = await db.rpc('claim_account_review', {
+    p_request_id: id, p_reviewer: reviewer.id,
+  })
+  if (claimError) return { error: 'Could not reserve this request for review. Try again.' }
+  if (!req?.id || !req.reviewed_at) return { error: 'This request is already being reviewed or has been completed. A stalled review becomes retryable after 10 minutes.' }
 
-  const { data: profile, error: profileError } = await db.from('profiles').select('id,full_name,email,authorized').ilike('email', req.email).maybeSingle()
-  if (profileError) return { error: 'Could not check for an existing account.' }
-  if (profile?.authorized) return { error: 'An authorized account with this email already exists.' }
+  let completed = false
+  try {
+    const { data: profile, error: profileError } = await db.from('profiles')
+      .select('id,email,authorized').eq('email', req.email).maybeSingle()
+    if (profileError) throw new Error('Could not check the existing account.')
+    if (profile?.authorized) throw new Error('An authorized account already exists for this address.')
 
-  let userId: string | null = profile?.id ?? req.linked_user_id ?? null
-  let link: string | null = null
-  let subject = 'SPCC Pass: Account approved'
-  let message = 'Your SPCC Pass account has been approved. Sign in with your existing account credentials at ' + base + '/login'
-
-  if (!profile || !profile.authorized) {
-    const kind = userId ? 'recovery' : 'invite'
-    const { data, error } = kind === 'invite'
-      ? await db.auth.admin.generateLink({ type: 'invite', email: req.email, options: { data: { full_name: req.full_name, type: req.requested_role } } })
+    const previousId = req.linked_user_id ?? profile?.id ?? null
+    const kind = previousId ? 'recovery' : 'invite'
+    const { data: authLink, error: authError } = kind === 'invite'
+      ? await db.auth.admin.generateLink({
+          type: 'invite', email: req.email,
+          options: { data: { full_name: req.full_name, type: req.requested_role } },
+        })
       : await db.auth.admin.generateLink({ type: 'recovery', email: req.email })
-    if (error || !data?.properties?.hashed_token || !data.user?.id) return { error: 'Activation link could not be generated. Check whether this email already has an account.' }
-    userId = data.user.id
-    if (req.linked_user_id && req.linked_user_id !== userId) return { error: 'Account identity mismatch.' }
-    const { error: linkError } = await db.from('account_requests').update({ linked_user_id: userId }).eq('id', id).eq('status', 'pending')
-    if (linkError) return { error: 'Could not save account invitation. Please retry.' }
-    const token = encodeURIComponent(data.properties.hashed_token)
-    link = base + '/auth/confirm?type=' + kind + '&token_hash=' + token
-    subject = 'SPCC Pass: Activate your approved account'
-    message = 'Your activation request was approved. Open the secure link below to set your own password: ' + link + '\nThe link is private and expires automatically.'
+    if (authError || !authLink?.properties?.hashed_token || !authLink.user?.id) {
+      throw new Error('Could not generate an activation link. Check the authentication record.')
+    }
+    const userId = authLink.user.id
+    if (previousId && previousId !== userId) throw new Error('The authentication account does not match the request.')
+
+    const { error: linkedError } = await db.from('account_requests')
+      .update({ linked_user_id: userId }).eq('id', id)
+      .eq('status', 'processing').eq('reviewed_by', reviewer.id).eq('reviewed_at', req.reviewed_at)
+    if (linkedError) throw new Error('Could not save the activation account.')
+
+    const { data: approved, error: approveError } = await db.rpc('complete_account_review', {
+      p_request_id: id, p_reviewer: reviewer.id,
+      p_claimed_at: req.reviewed_at, p_user: userId,
+    })
+    if (approveError || !approved) throw new Error('Could not finalize authorization. Retry the review.')
+    completed = true
+    revalidatePath('/')
+
+    const link = base + '/auth/confirm?type=' + kind
+      + '&token_hash=' + encodeURIComponent(authLink.properties.hashed_token)
+    const safe = (value: string) => value.replace(/[&<>"']/g, ch =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] ?? ch))
+    const subject = 'SPCC Pass: Activate your approved account'
+    const message = 'Your account request was approved. Open this private link to set your password: '
+      + link + '\nThis link expires automatically.'
+    const html = '<div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:24px">'
+      + '<h2 style="color:#07095f">SPCC Pass</h2><p>Hello ' + safe(req.full_name)
+      + ',</p><p>Your account is approved.</p><p><a href="' + safe(link)
+      + '" style="display:inline-block;padding:12px 20px;background:#07095f;color:white;border-radius:8px;text-decoration:none">'
+      + 'Set your account password</a></p><p>If you did not request this, contact your school administrator.</p></div>'
+    const delivery = await send(req.email, subject, message, html)
+    await logAccessDelivery(req.email, 'account activation', delivery)
+    if (delivery.status !== 'sent') {
+      return { error: 'Account approved, but the activation email was not accepted. Use Resend activation email under Approved accounts after checking your email provider.' }
+    }
+    return {}
+  } catch (err) {
+    console.error('Account review failed:', err instanceof Error ? err.message : 'Unknown error')
+    return { error: err instanceof Error ? err.message : 'Account approval failed. Retry this request.' }
+  } finally {
+    if (!completed) {
+      const { error } = await db.rpc('release_account_review', {
+        p_request_id: id, p_reviewer: reviewer.id, p_claimed_at: req.reviewed_at,
+      })
+      if (error) console.error('Could not release failed access review:', error.message)
+    }
   }
-
-  if (!userId) return { error: 'No account was found.' }
-  const safe = (value: string) => value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] ?? ch))
-  const html = '<div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:24px"><h2 style="color:#07095f">SPCC Pass</h2><p>Hello ' + safe(req.full_name) + ',</p><p>Your account request was approved by an administrator.</p>' + (link ? '<p><a href="' + safe(link) + '" style="display:inline-block;padding:12px 20px;background:#07095f;color:white;border-radius:8px;text-decoration:none">Activate account and set password</a></p>' : '<p>Use your existing email and password to sign in.</p>') + '<p style="color:#555">If you did not request access, contact the school.</p></div>'
-  const delivery = await send(req.email, subject, message, html)
-  await logAccessDelivery(req.email, 'account activation', delivery)
-  if (delivery.status !== 'sent') return { error: 'Activation email was not accepted (' + delivery.status + '): ' + delivery.detail.slice(0, 160) }
-
-  const { error: updateError } = await db.from('profiles').update({ full_name: req.full_name, role: req.requested_role, authorized: true }).eq('id', userId).eq('authorized', false)
-  if (updateError) return { error: 'Email accepted, but authorization failed. Contact the administrator before retrying.' }
-  const { error: requestError } = await db.from('account_requests').update({ status: 'approved', reviewed_by: reviewer.id, reviewed_at: new Date().toISOString() }).eq('id', id).eq('status', 'pending')
-  if (requestError) return { error: 'Account authorized, but review status failed to save.' }
-  revalidatePath('/')
-  return {}
 }
 
 
