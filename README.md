@@ -203,3 +203,24 @@ dialogs, and honoured `prefers-reduced-motion`, `prefers-reduced-transparency` a
 System font, rem-based type, sticky top bar. On phones, dialogs are bottom sheets: drag the
 handle to dismiss, and the release velocity decides. Reduced motion, reduced transparency and
 higher contrast preferences are handled.
+
+## Troubleshooting outbound email
+
+Open **Email delivery** in the administrator dashboard and choose **Send test to my email**
+to submit a diagnostic message to the signed-in administrator's own email address. This action
+requires an authorized administrator, limits accepted diagnostic messages to one per minute,
+and records the attempt in `email_log` without exposing SMTP credentials.
+
+If an account has been approved but the user did not receive their setup link, open
+**Access requests**, locate the approved account, and choose **Resend activation email**.
+The action sends a fresh time-limited password-setup link to the already approved and linked
+email address. The existing account and bookings remain unchanged.
+
+For Maileroo, check **Domains → your sending domain → Overview → Sending → Logs** and inspect
+the message's delivery events. Confirm whether it was delivered, bounced, delayed, or suppressed.
+The app's `sent` status means SMTP accepted the message, not that it reached an inbox.
+If no entry appears in `email_log`, check whether the action ran and whether the local
+development server loaded `.env.local`. Confirm `EMAIL_PROVIDER=smtp`, the Maileroo
+SMTP configuration, and the verified `EMAIL_FROM` address. Restart Next.js after changing
+environment variables. A `localhost` link is only usable on the host device. For recipients
+on different devices, configure `APP_URL` with a reachable HTTPS deployment.
