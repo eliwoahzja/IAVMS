@@ -41,3 +41,28 @@ jobs:
       - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f tests/scheduling-schema.sql
       - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f supabase/migrations/0011_teacher_scheduling_and_atomic_guards.sql
       - run: node --test tests/scheduling-concurrency.mjs
+
+  authorization:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: iavms_access_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_PG_URL: postgresql://postgres:postgres@localhost:5432/iavms_access_test
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f tests/access-schema.sql
+      - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f supabase/migrations/0012_authorization_and_activation_consistency.sql
+      - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f tests/access-controls.sql
