@@ -1,6 +1,6 @@
 import { revalidatePath } from 'next/cache'
 import { admin } from '@/lib/supabase/admin'
-import { send } from '@/lib/email/delivery'
+import { send, logAccessDelivery } from '@/lib/email/delivery'
 import { me } from './context'
 import type { R } from '@/lib/types'
 
@@ -63,12 +63,55 @@ export async function reviewAccess(id: string, action: 'approve' | 'reject'): Pr
   const safe = (value: string) => value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] ?? ch))
   const html = '<div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:24px"><h2 style="color:#07095f">SPCC Pass</h2><p>Hello ' + safe(req.full_name) + ',</p><p>Your account request was approved by an administrator.</p>' + (link ? '<p><a href="' + safe(link) + '" style="display:inline-block;padding:12px 20px;background:#07095f;color:white;border-radius:8px;text-decoration:none">Activate account and set password</a></p>' : '<p>Use your existing email and password to sign in.</p>') + '<p style="color:#555">If you did not request access, contact the school.</p></div>'
   const delivery = await send(req.email, subject, message, html)
-  if (delivery.status !== 'sent') return { error: 'Activation email was not accepted (' + delivery.status + '). Check Maileroo SMTP settings and retry approval.' }
+  await logAccessDelivery(req.email, 'account activation', delivery)
+  if (delivery.status !== 'sent') return { error: 'Activation email was not accepted (' + delivery.status + '): ' + delivery.detail.slice(0, 160) }
 
   const { error: updateError } = await db.from('profiles').update({ full_name: req.full_name, role: req.requested_role, authorized: true }).eq('id', userId).eq('authorized', false)
   if (updateError) return { error: 'Email accepted, but authorization failed. Contact the administrator before retrying.' }
   const { error: requestError } = await db.from('account_requests').update({ status: 'approved', reviewed_by: reviewer.id, reviewed_at: new Date().toISOString() }).eq('id', id).eq('status', 'pending')
   if (requestError) return { error: 'Account authorized, but review status failed to save.' }
+  revalidatePath('/')
+  return {}
+}
+
+
+export async function resendActivation(id: string): Promise<R> {
+  const reviewer = await me()
+  if (reviewer.role !== 'admin') return { error: 'Only administrators can resend activation emails.' }
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: 'Invalid activation request.' }
+  const base = origin()
+  if (!base) return { error: 'APP_URL must be a reachable HTTPS address for recipients on another device. Localhost only works on the server device.' }
+  const db = admin()
+  const { data: req, error: readError } = await db.from('account_requests')
+    .select('id,email,full_name,linked_user_id,status')
+    .eq('id', id).eq('status', 'approved').maybeSingle()
+  if (readError || !req) return { error: 'Approved activation request was not found.' }
+  if (!req.linked_user_id) return { error: 'This approved request has no linked authentication account. Check its user record.' }
+  const { data: profile, error: profileError } = await db.from('profiles')
+    .select('id,email,authorized').eq('id', req.linked_user_id).maybeSingle()
+  if (profileError || !profile || !profile.authorized || profile.email.toLowerCase() !== req.email.toLowerCase()) {
+    return { error: 'The approved account could not be verified. No email was sent.' }
+  }
+  const { data: recent, error: recentError } = await db.from('email_log')
+    .select('created_at').eq('to_email', req.email).eq('event', 'activation resend')
+    .eq('status', 'sent').order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (recentError) return { error: 'Could not check the resend history.' }
+  if (recent && Date.now() - new Date(recent.created_at).getTime() < 60000) {
+    return { error: 'An activation email was sent recently. Check your inbox and retry after a minute.' }
+  }
+  const { data, error } = await db.auth.admin.generateLink({ type: 'recovery', email: req.email })
+  if (error || !data?.properties?.hashed_token || data.user?.id !== profile.id) {
+    await logAccessDelivery(req.email, 'activation resend', { status: 'failed', detail: 'Could not generate a password setup link: ' + (error?.message ?? 'Authentication user mismatch').slice(0, 220) })
+    return { error: 'Could not generate a new activation link. Check the authentication user and try again.' }
+  }
+  const link = base + '/auth/confirm?type=recovery&token_hash=' + encodeURIComponent(data.properties.hashed_token)
+  const safe = (value: string) => value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] ?? ch))
+  const subject = 'SPCC Pass: Set your approved account password'
+  const body = 'Your approved account has a new password setup link. Open this private link to set your password: ' + link + '\nIf you did not request this, contact your school administrator.'
+  const html = '<div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:24px"><h2 style="color:#07095f">SPCC Pass</h2><p>Hello ' + safe(req.full_name) + ',</p><p>Your administrator has sent a new password setup link for your approved account.</p><p><a href="' + safe(link) + '" style="display:inline-block;padding:12px 20px;background:#07095f;color:#fff;border-radius:8px;text-decoration:none">Set your password</a></p><p>This link is private and expires automatically. If you did not request this, contact your administrator.</p></div>'
+  const delivery = await send(req.email, subject, body, html)
+  await logAccessDelivery(req.email, 'activation resend', delivery)
+  if (delivery.status !== 'sent') return { error: 'Email provider did not accept the message (' + delivery.status + '): ' + delivery.detail.slice(0, 160) }
   revalidatePath('/')
   return {}
 }
