@@ -94,6 +94,14 @@ email uses the existing `EMAIL_PROVIDER` transport (SMTP Maileroo or Resend). Th
 password through a time-limited link and then signs in. **Never send plaintext passwords by email.**
 If email transport fails, the request stays pending for retry; a created invited account remains unauthorized.
 Approval uses the service-role key only in server actions, never in the browser.
+Every activation email attempt now appears in the administrator **Email delivery** tab, with status
+`sent`, `skipped`, or `failed`. `sent` only indicates provider acceptance, not guaranteed
+arrival in the recipient's inbox. Approved users remain visible in **Access requests** so
+administrators can resend a time-limited password-setup email when an earlier link is lost.
+Resends require an approved and authorized matching user account and are limited to once
+per minute for provider-accepted messages. The administrator should verify provider delivery
+logs, spam folders, and domain authentication settings when messages show `sent` but do
+not appear in the inbox.
 
 Set `APP_URL` in `.env.local` to the trusted, reachable origin of the app. For example, on the same
 development device use `APP_URL=http://localhost:3000`. Recipients on a different device cannot
