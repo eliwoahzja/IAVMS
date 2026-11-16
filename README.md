@@ -114,7 +114,16 @@ access-request form before accepting untrusted high-volume traffic.
   screen shows a slot as *Request pending* when someone else is waiting on it, and lets the
   approver see that before deciding.
 - **One open request per slot.** A requester cannot hold two open requests for the same office,
-  date and time; the server rejects the second.
+  date and time. Both the server validation and the `one_open_request_per_requester_slot`
+  database index reject duplicates, including two submissions from separate browser tabs.
+- **Submission order.** Pending requests are displayed to administrators and department
+  approvers in server-recorded submission order (`created_at`, then appointment ID).
+  Submission times include milliseconds. A timestamp documents when the database recorded
+  the request; it does not measure internet connection speed or grant automatic priority.
+- **Approval concurrency.** Approval, rejection, rescheduling and cancellation update
+  records only if their status has not changed since staff read them. If another action wins
+  the race, the system requests a refresh and does not send duplicate notifications.
+  The confirmed-slot unique index remains the final safeguard against double-booking.
 - **Human approval.** Nothing is approved automatically. Approvers decide, and the database
   rejects a second approval into the same slot.
 - **Cancellations.** A requester can cancel their own pending, approved or rescheduled request;
