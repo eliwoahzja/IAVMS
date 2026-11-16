@@ -12,7 +12,7 @@ const targetDate = '2030-01-07'
 
 async function sql(query) {
   try {
-    const { stdout } = await exec('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-A', '-t', database, '-c', query])
+    const { stdout } = await exec('psql', ['-X', '-q', '-v', 'ON_ERROR_STOP=1', '-A', '-t', database, '-c', query])
     return { ok: true, output: stdout.trim() }
   } catch (error) {
     return { ok: false, output: String(error.stderr ?? error.message).slice(0, 1200) }
