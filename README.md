@@ -18,7 +18,7 @@ update public.profiles set role = 'admin' where email = 'you@spcc.ph';
 ```
 
 For a fresh installation, run `supabase/schema.sql` and then the migrations in
-`supabase/migrations/` from `0008` through `0012`, in ascending order. For an existing
+`supabase/migrations/` from `0008` through `0013`, in ascending order. For an existing
 IAVMS database, run only unapplied migrations and do not rerun the base schema.
 The `0011_teacher_scheduling_and_atomic_guards.sql` migration separates College of IT
 teacher capacity and installs the database transaction guards. The migration is already
@@ -285,3 +285,7 @@ requesters can still view their own records, concurrent claim attempts do not
 both succeed, and the final approval operation updates both records together.
 
 These changes do not include any Chapter 3 or capstone diagram edits.
+
+The `0013_limit_role_helpers_to_signed_in_users.sql` migration removes anonymous
+execution access to the database role helper functions and keeps authorized
+users' normal row-level access intact. It is applied to the connected project.
