@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { Check, LogOut, Menu, Plus, Search, X } from 'lucide-react'
-import { cancel, markVisit, signOut } from '@/app/actions'
+import { cancel, markVisit, signOut, testAdminEmail } from '@/app/actions'
 import { SkeletonRows, SkeletonTableRows } from '@/components/skeleton'
 import { STATUSES, TYPE_LABEL, bySchedule, bySubmission, code, initials, personLabel, tone } from '@/lib/constants'
 import { TABS, INTRO, TAB_TITLE, type Group, type Tab } from '@/components/dashboard/config'
@@ -161,7 +161,11 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
 
         {tab === 'Offices' && <Offices departments={departments} run={run} busy={busy} refreshing={refreshing} />}
 
-        {tab === 'Email log' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={3} label="Refreshing the email log" /> : emails.length ? emails.map((m) => <div className="request-row" key={m.id}><span className="request-person"><strong>{m.appointment_id ? code(m.appointment_id) : 'No reference'}: {m.event}</strong><span>{m.to_email}</span></span><span className="request-detail"><strong>{m.status}</strong><span>{m.detail || stamp(m.created_at)}</span></span></div>) : <p className="empty-copy">No emails have been logged yet.</p>}</div></div>}
+        {tab === 'Email log' && <div className="panel">
+          <div className="panel-heading"><div><h2>Email delivery diagnostics</h2><p className="panel-sub">Sent means the provider accepted the message, not guaranteed inbox delivery. Use the provider's delivery-event logs to check bounces or suppressions.</p></div>
+            <button type="button" className="secondary-button" disabled={busy} onClick={() => run(() => testAdminEmail(), 'Test email accepted. Check your admin inbox and provider delivery logs.')}>Send test to my email</button>
+          </div>
+          <div className="request-list">{refreshing ? <SkeletonRows rows={3} label="Refreshing the email log" /> : emails.length ? emails.map((m) => <div className="request-row" key={m.id}><span className="request-person"><strong>{m.appointment_id ? code(m.appointment_id) : 'Account/system'}: {m.event}</strong><span>{m.to_email}</span></span><span className="request-detail"><strong>{m.status}</strong><span>{m.detail || stamp(m.created_at)}</span></span></div>) : <p className="empty-copy">No emails have been logged yet.</p>}</div></div>}
 
         {tab === 'Access requests' && <AccessRequests requests={accessRequests} run={run} busy={busy} />}
 
