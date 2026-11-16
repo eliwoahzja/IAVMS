@@ -18,7 +18,7 @@ update public.profiles set role = 'admin' where email = 'you@spcc.ph';
 ```
 
 For a fresh installation, run `supabase/schema.sql` and then the migrations in
-`supabase/migrations/` from `0008` through `0011`, in ascending order. For an existing
+`supabase/migrations/` from `0008` through `0012`, in ascending order. For an existing
 IAVMS database, run only unapplied migrations and do not rerun the base schema.
 The `0011_teacher_scheduling_and_atomic_guards.sql` migration separates College of IT
 teacher capacity and installs the database transaction guards. The migration is already
@@ -256,3 +256,32 @@ blocking, weekly-hour changes, office deactivation and cancellation.
 They use no production records or credentials.
 
 The previous Chapter 3 documentation and diagrams have not been changed.
+
+## Authorization and account activation safeguards
+
+The `0012_authorization_and_activation_consistency.sql` migration is already applied to
+the connected IAVMS Supabase project. It requires `profiles.authorized=true` for
+direct appointment, visitor, office-hours and email-log access, even if a previously
+authorized account retains an unexpired authentication token. Revoked approvers
+are also excluded from appointment email notifications.
+
+New account approvals use a database-backed claim to prevent concurrent
+administrator approvals. The claim expires after ten minutes if a server
+crash leaves an account request in `processing`; an administrator may retry
+that review from **Access requests**. Completing an approval atomically updates
+the account's authorization and the request's reviewed status. Only after this
+commit does the application send the activation email.
+
+If email delivery is skipped or rejected, the account stays **approved**,
+and an administrator can use **Resend activation email**. This avoids
+automatically resending an email to an account whose authorization may already
+have succeeded. Existing rejected applicants may resubmit corrected details
+after a short cooldown; submissions for existing pending/approved requests
+do not create duplicate records.
+
+The CI workflow includes an isolated PostgreSQL authorization job. Its test
+fixtures check that revoked accounts lose direct data access, authorized
+requesters can still view their own records, concurrent claim attempts do not
+both succeed, and the final approval operation updates both records together.
+
+These changes do not include any Chapter 3 or capstone diagram edits.
