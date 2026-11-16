@@ -18,6 +18,16 @@ export const isRequester = (r: Role) => r === 'student' || r === 'faculty' || r 
 export const code = (id: number) => `APT-${String(id).padStart(4, '0')}`
 export const bySchedule = <T extends { date: string; time: string }>(a: T, b: T) =>
   a.date.localeCompare(b.date) || SLOTS.indexOf(a.time) - SLOTS.indexOf(b.time)
+export const bySubmission = <T extends { id: number; created_at: string }>(a: T, b: T) =>
+  a.created_at.localeCompare(b.created_at) || a.id - b.id
+export const submittedAt = (iso: string) => {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return 'Not recorded'
+  return new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3,
+  }).format(date)
+}
 export const initials = (name: string) => name.split(' ').filter(Boolean).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?'
 export const tone = (id: number) => (['coral', 'sage', 'lavender', 'sand'] as const)[id % 4]
 export const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
