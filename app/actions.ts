@@ -2,15 +2,15 @@
 
 import { slotStates as getSlots, book as submitBooking, decide as decideBooking, cancel as cancelBooking } from '@/lib/actions/appointments'
 import { registerVisitor as createVisitor, markVisit as updateVisitor } from '@/lib/actions/visitors'
-import { toggleSlot as setSlot, blockSlot as closeSlot, unblockSlot as openSlot, saveOffice as updateOffice } from '@/lib/actions/offices'
+import { toggleSlot as setSlot, blockSlot as closeSlot, unblockSlot as openSlot, saveOffice as updateOffice, toggleTeacherSlot as setTeacherSlot, blockTeacherSlot as closeTeacherSlot, unblockTeacherSlot as openTeacherSlot } from '@/lib/actions/offices'
 import { setUserRole as updateRole, setAuthorized as updateAuthorization, deleteAccount as removeAccount } from '@/lib/actions/users'
 import { signIn as performSignIn, requestActivation as performRequestActivation, signOut as performSignOut, setPassword as performSetPassword } from '@/lib/actions/auth'
 import { reviewAccess, resendActivation } from '@/lib/actions/access-requests'
 import { sendDiagnosticEmail } from '@/lib/actions/email-diagnostics'
 import type { Role } from '@/lib/types'
 
-export async function slotStates(department: string, date: string) {
-  return getSlots(department, date)
+export async function slotStates(department: string, date: string, teacherName?: string | null) {
+  return getSlots(department, date, teacherName)
 }
 export async function book(input: { department: string; teacher_name?: string | null; date: string; time: string; purpose: string }) {
   return submitBooking(input)
@@ -71,4 +71,14 @@ export async function resendActivationEmail(id: string) {
 
 export async function testAdminEmail() {
   return sendDiagnosticEmail()
+}
+
+export async function toggleTeacherSlot(teacher: string, weekday: number, time: string, on: boolean) {
+  return setTeacherSlot(teacher, weekday, time, on)
+}
+export async function blockTeacherSlot(teacher: string, date: string, time: string | null, reason: string) {
+  return closeTeacherSlot(teacher, date, time, reason)
+}
+export async function unblockTeacherSlot(id: number) {
+  return openTeacherSlot(id)
 }
