@@ -21,6 +21,18 @@ export const slotPassed = (date: string, time: string) => {
   const minutes = hour * 60 + Number(match[2])
   return date < localDate || (date === localDate && minutes <= Number(p.hour) * 60 + Number(p.minute))
 }
+export const scheduleError = (error: { code?: string; message?: string } | null, fallback: string) => {
+  if (!error) return fallback
+  const message = error.message ?? ''
+  if (message.includes('CONFIRMED_APPOINTMENTS_EXIST')) return 'This change conflicts with a confirmed appointment. Reschedule the booking before closing the slot.'
+  if (message.includes('SLOT_BOOKED') || (error.code === '23505' && message.includes('one_teacher_booking_per_slot'))) return 'This slot is already confirmed for the selected teacher or office.'
+  if (message.includes('SLOT_CLOSED') || message.includes('OFFICE_CLOSED')) return 'This office slot is unavailable or has been closed.'
+  if (message.includes('TEACHER_UNAVAILABLE')) return 'This teacher is unavailable for the selected time. Choose another slot.'
+  if (message.includes('SLOT_PASSED')) return 'The selected appointment time has already passed.'
+  if (message.includes('OFFICE_IMMUTABLE')) return 'Existing appointments cannot be moved to another office.'
+  if (error.code === '23505') return 'An existing request or confirmed booking already occupies this slot.'
+  return fallback
+}
 const weekday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay()
 
 export async function me(): Promise<Profile> {
