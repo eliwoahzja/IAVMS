@@ -41,6 +41,8 @@ create table public.appointments (
 );
 
 create unique index one_booking_per_slot on public.appointments (department, date, time) where status in ('Approved','Rescheduled');
+create unique index one_open_request_per_requester_slot on public.appointments (requester_id, department, date, "time") where status in ('Pending','Approved','Rescheduled');
+create index appointment_pending_submission_order on public.appointments (department, date, "time", created_at, id) where status = 'Pending';
 create table public.visitors (
   id bigint generated always as identity primary key,
   name text not null, purpose text not null, department text not null,
