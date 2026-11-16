@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer'
 import { admin } from '../supabase/admin'
 import type { Mailable } from './messages'
 
-type DeliveryResult = { status: 'sent' | 'failed' | 'skipped'; detail: string }
+export type DeliveryResult = { status: 'sent' | 'failed' | 'skipped'; detail: string }
 
 async function sendSmtp(to: string, subject: string, text: string, html: string): Promise<DeliveryResult> {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE, EMAIL_FROM } = process.env
@@ -26,7 +26,7 @@ async function sendSmtp(to: string, subject: string, text: string, html: string)
       socketTimeout: 15000,
     })
     const info = await transport.sendMail({ from: EMAIL_FROM, to, subject, text, html })
-    return { status: info.accepted.length > 0 ? 'sent' : 'failed', detail: info.accepted.length > 0 ? '' : 'SMTP server did not accept the recipient' }
+    return { status: info.accepted.length > 0 ? 'sent' : 'failed', detail: info.accepted.length > 0 ? `SMTP accepted: ${String(info.response || 'Message queued').slice(0, 180)}` : 'SMTP server did not accept the recipient' }
   } catch (error) {
     return { status: 'failed', detail: String(error).slice(0, 300) }
   }
@@ -58,4 +58,15 @@ export async function send(to: string, subject: string, text: string, html: stri
 export async function log(a: Mailable, to: string, event: string, r: DeliveryResult) {
   const { error } = await admin().from('email_log').insert({ appointment_id: a.id, to_email: to, event, status: r.status, detail: r.detail })
   if (error) console.error('email log failed:', error.message)
+}
+
+export async function logAccessDelivery(to: string, event: string, result: DeliveryResult) {
+  const { error } = await admin().from('email_log').insert({
+    appointment_id: null,
+    to_email: to,
+    event,
+    status: result.status,
+    detail: result.detail.slice(0, 400),
+  })
+  if (error) console.error('activation email delivery log failed:', error.message)
 }
