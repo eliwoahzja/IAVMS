@@ -5,7 +5,7 @@ import { registerVisitor as createVisitor, markVisit as updateVisitor } from '@/
 import { toggleSlot as setSlot, blockSlot as closeSlot, unblockSlot as openSlot, saveOffice as updateOffice } from '@/lib/actions/offices'
 import { setUserRole as updateRole, setAuthorized as updateAuthorization, deleteAccount as removeAccount } from '@/lib/actions/users'
 import { signIn as performSignIn, requestActivation as performRequestActivation, signOut as performSignOut, setPassword as performSetPassword } from '@/lib/actions/auth'
-import { reviewAccess } from '@/lib/actions/access-requests'
+import { reviewAccess, resendActivation } from '@/lib/actions/access-requests'
 import type { Role } from '@/lib/types'
 
 export async function slotStates(department: string, date: string) {
@@ -62,4 +62,8 @@ export async function setPassword(fd: FormData) {
 }
 export async function reviewAccessRequest(id: string, action: 'approve' | 'reject') {
   return reviewAccess(id, action)
+}
+
+export async function resendActivationEmail(id: string) {
+  return resendActivation(id)
 }
