@@ -63,7 +63,7 @@ export async function setPassword(fd: FormData) {
   if (password !== confirmation) back('/set-password', 'error', 'Passwords do not match.')
   const sb = await supabase()
   const { data: { user } } = await sb.auth.getUser()
-  if (!user) back('/login', 'error', 'Open the activation link from your email.')
+  if (!user) return back('/login', 'error', 'Open the activation link from your email.')
   const { data: profile } = await sb.from('profiles').select('authorized').eq('id', user.id).maybeSingle()
   if (!profile?.authorized) back('/set-password', 'error', 'Your account needs administrator approval.')
   const { error } = await sb.auth.updateUser({ password })
