@@ -65,4 +65,5 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f tests/access-schema.sql
       - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f supabase/migrations/0012_authorization_and_activation_consistency.sql
+      - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f supabase/migrations/0013_limit_role_helpers_to_signed_in_users.sql
       - run: psql -X -v ON_ERROR_STOP=1 "$TEST_PG_URL" -f tests/access-controls.sql
