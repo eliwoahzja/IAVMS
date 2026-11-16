@@ -1,34 +1,48 @@
 'use client'
 
 import { useState } from 'react'
-import { blockSlot, deleteAccount, saveOffice, setAuthorized, setUserRole, toggleSlot, unblockSlot } from '@/app/actions'
+import { blockSlot, blockTeacherSlot, deleteAccount, saveOffice, setAuthorized, setUserRole, toggleSlot, toggleTeacherSlot, unblockSlot, unblockTeacherSlot } from '@/app/actions'
 import { DatePicker } from '@/components/date-picker'
 import { SkeletonRows } from '@/components/skeleton'
 import { BusyButton, type Run } from '@/components/dashboard/shared'
-import { ROLES, SLOTS, WEEKDAYS, day, initials, tone } from '@/lib/constants'
-import type { Avail, Block, Dept, Profile, Role } from '@/lib/types'
+import { IT_DEPARTMENT, IT_TEACHERS, ROLES, SLOTS, WEEKDAYS, day, initials, tone } from '@/lib/constants'
+import type { Avail, Block, Dept, Profile, Role, TeacherAvail, TeacherBlock } from '@/lib/types'
 
-export function Availability({ profile, avail, blocks, depts, today, run, busy, refreshing }: { profile: Profile; avail: Avail[]; blocks: Block[]; depts: string[]; today: string; run: Run; busy: boolean; refreshing: boolean }) {
+export function Availability({ profile, avail, blocks, teacherAvail, teacherBlocks, depts, today, run, busy, refreshing }: { profile: Profile; avail: Avail[]; blocks: Block[]; teacherAvail: TeacherAvail[]; teacherBlocks: TeacherBlock[]; depts: string[]; today: string; run: Run; busy: boolean; refreshing: boolean }) {
   const [dept, setDept] = useState(profile.department ?? depts[0])
+  const [teacher, setTeacher] = useState('')
+  const selectedTeacher = dept === IT_DEPARTMENT ? teacher : ''
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [reason, setReason] = useState('')
-  const on = new Set(avail.filter((a) => a.department === dept).map((a) => `${a.weekday}-${a.time}`))
-  const blocked = blocks.filter((b) => b.department === dept)
+  const on = new Set((selectedTeacher ? teacherAvail.filter((a) => a.teacher_name === selectedTeacher) : avail.filter((a) => a.department === dept)).map((a) => `${a.weekday}-${a.time}`))
+  const blocked = selectedTeacher ? teacherBlocks.filter((b) => b.teacher_name === selectedTeacher) : blocks.filter((b) => b.department === dept)
   const add = () => run(async () => {
-    const r = await blockSlot(dept, date, time || null, reason)
+    const r = selectedTeacher
+      ? await blockTeacherSlot(selectedTeacher, date, time || null, reason)
+      : await blockSlot(dept, date, time || null, reason)
     if (!r.error) { setDate(''); setTime(''); setReason('') }
     return r
   }, 'Marked unavailable')
   return <div className="panel">
     <div className="panel-heading"><div><h2>{dept}</h2><p className="panel-sub">Weekly hours</p></div>
-      {profile.role === 'admin' && <div className="filters"><label className="field-label" htmlFor="a-dept">Office</label><select id="a-dept" className="field-input" value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}</div>
+      {profile.role === 'admin' && <div className="filters"><label className="field-label" htmlFor="a-dept">Office</label><select id="a-dept" className="field-input" value={dept} onChange={(e) => { setDept(e.target.value); setTeacher(''); setDate(''); setTime('') }}>{depts.map((d) => <option key={d}>{d}</option>)}</select></div>}</div>
+    {dept === IT_DEPARTMENT && <div className="block-section">
+      <label className="field-label" htmlFor="teacher-schedule">Schedule to manage</label>
+      <select id="teacher-schedule" className="field-input" value={selectedTeacher} onChange={(e) => { setTeacher(e.target.value); setDate(''); setTime('') }}>
+        <option value="">College of IT (department-wide)</option>
+        {IT_TEACHERS.map((name) => <option key={name} value={name}>{name}</option>)}
+      </select>
+      <p className="muted-note">{selectedTeacher
+        ? 'Teacher availability is independent. Department-wide closures still apply. Changes affecting confirmed appointments are blocked.'
+        : 'Department-wide hours and closures apply to every IT teacher.'}</p>
+    </div>}
     <div className="table-wrap" aria-busy={refreshing}><table className="table"><thead><tr><th>Slot</th>{WEEKDAYS.map((w) => <th key={w.n}>{w.label}</th>)}</tr></thead>
-      <tbody>{SLOTS.map((t) => <tr key={t}><td>{t}</td>{WEEKDAYS.map((w) => <td key={w.n}><input type="checkbox" aria-label={`${w.label} ${t}`} checked={on.has(`${w.n}-${t}`)} onChange={(e) => run(() => toggleSlot(dept, w.n, t, e.target.checked), 'Availability updated')} /></td>)}</tr>)}</tbody></table></div>
+      <tbody>{SLOTS.map((t) => <tr key={t}><td>{t}</td>{WEEKDAYS.map((w) => <td key={w.n}><input type="checkbox" aria-label={`${w.label} ${t}`} checked={on.has(`${w.n}-${t}`)} onChange={(e) => { const checked = e.currentTarget.checked; run(() => selectedTeacher ? toggleTeacherSlot(selectedTeacher, w.n, t, checked) : toggleSlot(dept, w.n, t, checked), 'Availability updated') }} /></td>)}</tr>)}</tbody></table></div>
 
     <div className="block-section">
       <h3>Close dates or times</h3>
-      <p className="muted-note">Block one time or a whole day for a closure or meeting. Existing approved appointments are not cancelled automatically.</p>
+      <p className="muted-note">Close one time or a whole day. Confirmed appointments must be rescheduled before their slots can be closed.</p>
       <div className="block-form">
         <DatePicker id="block-date" label="Date" value={date} min={today} onChange={setDate} />
         <div>
@@ -47,7 +61,7 @@ export function Availability({ profile, avail, blocks, depts, today, run, busy, 
       {blocked.length ? <ul className="block-list">{blocked.map((b) => <li className="block-row" key={b.id}>
         <span className="block-when"><strong>{day(b.date)}</strong><span>{b.time ?? 'Whole day'}</span></span>
         <span className="block-reason">{b.reason}</span>
-        <BusyButton label="Remove" disabled={busy} onClick={() => run(() => unblockSlot(b.id), 'Time available again')}>Remove</BusyButton>
+        <BusyButton label="Remove" disabled={busy} onClick={() => run(() => selectedTeacher ? unblockTeacherSlot(b.id) : unblockSlot(b.id), 'Time available again')}>Remove</BusyButton>
       </li>)}</ul> : <p className="empty-copy">Every time is available.</p>}
     </div>
   </div>
