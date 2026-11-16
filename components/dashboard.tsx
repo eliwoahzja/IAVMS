@@ -12,7 +12,7 @@ import { Wizard, Review } from '@/components/dashboard/appointments'
 import { VisitorForm } from '@/components/dashboard/visitors'
 import { Availability, Offices, UserRow } from '@/components/dashboard/administration'
 import { AccessRequests } from '@/components/dashboard/access-requests'
-import type { AccountRequest, Appt, Avail, Block, Dept, MailRow, Profile, Status, Visitor } from '@/lib/types'
+import type { AccountRequest, Appt, Avail, Block, Dept, MailRow, Profile, Status, TeacherAvail, TeacherBlock, Visitor } from '@/lib/types'
 
 type Modal = null | 'book' | 'visitor' | { review: Appt }
 
@@ -28,9 +28,9 @@ function usePending(active: boolean, delay = 140) {
 
 const stamp = (iso: string) => new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })
 
-type Props = { profile: Profile; appts: Appt[]; visitors: Visitor[]; avail: Avail[]; blocks: Block[]; users: Profile[]; emails: MailRow[]; departments: Dept[]; accessRequests: AccountRequest[]; today: string }
+type Props = { profile: Profile; appts: Appt[]; visitors: Visitor[]; avail: Avail[]; blocks: Block[]; users: Profile[]; emails: MailRow[]; departments: Dept[]; accessRequests: AccountRequest[]; teacherAvail: TeacherAvail[]; teacherBlocks: TeacherBlock[]; today: string }
 
-export function Dashboard({ profile, appts, visitors, avail, blocks, users, emails, departments, accessRequests, today }: Props) {
+export function Dashboard({ profile, appts, visitors, avail, blocks, users, emails, departments, accessRequests, teacherAvail, teacherBlocks, today }: Props) {
   const group: Group = profile.role === 'admin' ? 'admin' : profile.role === 'approver' ? 'approver' : 'requester'
   const staff = group !== 'requester'
   const depts = departments.filter((d) => d.active).map((d) => d.name)
@@ -154,7 +154,7 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
 
         {tab === 'Visitors' && <div className="panel"><div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(visitors.length, 2), 5)} label="Refreshing visitor records" /> : visitors.length ? visitors.map((v) => <div className="request-row" key={v.id}><span className={`avatar avatar-${tone(v.id)}`}>{initials(v.name)}</span><span className="request-person"><strong>{v.name}</strong><span>{v.purpose}{v.appointment_id ? ` · ${code(v.appointment_id)}` : ''}</span></span><span className="request-detail"><strong>{v.department}</strong><span>{v.arrived_at ? `Arrived ${stamp(v.arrived_at)}` : 'Not arrived'}{v.left_at ? ` · Left ${stamp(v.left_at)}` : ''}</span></span><span className="row-actions">{!v.arrived_at && <BusyButton label="Mark arrived" disabled={busy} onClick={() => run(() => markVisit(v.id, 'arrived_at'), 'Arrival recorded')}>Mark arrived</BusyButton>}{v.arrived_at && !v.left_at && <BusyButton label="Mark left" disabled={busy} onClick={() => run(() => markVisit(v.id, 'left_at'), 'Departure recorded')}>Mark left</BusyButton>}</span></div>) : <p className="empty-copy">No visitor records yet. Use Register visitor to record a visit.</p>}</div></div>}
 
-        {tab === 'Availability' && <Availability profile={profile} avail={avail} blocks={blocks} depts={depts} today={today} run={run} busy={busy} refreshing={refreshing} />}
+        {tab === 'Availability' && <Availability profile={profile} avail={avail} blocks={blocks} teacherAvail={teacherAvail} teacherBlocks={teacherBlocks} depts={depts} today={today} run={run} busy={busy} refreshing={refreshing} />}
 
         {tab === 'Reports' && <div className="panel table-wrap" aria-busy={refreshing}><table className="table"><thead><tr><th>Office</th>{STATUSES.map((s) => <th key={s}>{s}</th>)}<th>Total</th></tr></thead>
           <tbody>{refreshing ? <SkeletonTableRows rows={Math.min(Math.max(depts.length, 2), 6)} cols={STATUSES.length + 2} /> : depts.map((d) => <tr key={d}><td>{d}</td>{STATUSES.map((s) => <td key={s}>{ordered.filter((a) => a.department === d && a.status === s).length}</td>)}<td>{ordered.filter((a) => a.department === d).length}</td></tr>)}</tbody></table></div>}
@@ -173,7 +173,11 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
       </div>
     </main>
 
-    {typeof modal === 'object' && modal && <ModalBox title={`Review ${code(modal.review.id)}`} onClose={() => setModal(null)}><Review a={modal.review} today={today} run={run} busy={busy} sameSlot={appts.filter((a) => a.id !== modal.review.id && a.department === modal.review.department && a.date === modal.review.date && a.time === modal.review.time)} /></ModalBox>}
+    {typeof modal === 'object' && modal && <ModalBox title={`Review ${code(modal.review.id)}`} onClose={() => setModal(null)}><Review a={modal.review} today={today} run={run} busy={busy} sameSlot={appts.filter((a) => a.id !== modal.review.id
+        && a.department === modal.review.department && a.date === modal.review.date && a.time === modal.review.time
+        && (modal.review.department !== 'College of IT'
+          || !modal.review.teacher_name || !a.teacher_name
+          || a.teacher_name === modal.review.teacher_name))} /></ModalBox>}
     {modal === 'book' && <ModalBox title="New appointment" onClose={() => setModal(null)}><Wizard today={today} depts={depts} own={profile.role === 'approver' ? profile.department : null} run={run} busy={busy} /></ModalBox>}
     {modal === 'visitor' && <ModalBox title="Register a visitor" onClose={() => setModal(null)}><VisitorForm profile={profile} depts={depts} appts={ordered} run={run} busy={busy} /></ModalBox>}
     {toast && <div className={`toast ${toastError ? 'toast-error' : ''}`} role={toastError ? 'alert' : 'status'}>{toastError ? <X /> : <Check />} {toast}</div>}
