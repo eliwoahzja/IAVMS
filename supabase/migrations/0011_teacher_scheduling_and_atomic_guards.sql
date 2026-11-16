@@ -70,10 +70,12 @@ begin
       raise exception using errcode='P0001',message='OFFICE_IMMUTABLE';
     end if;
     if NEW.status not in ('Pending','Approved','Rescheduled') then return NEW; end if;
-    if TG_OP = 'UPDATE' and NEW.status = OLD.status
-      and NEW.date = OLD.date and NEW."time" = OLD."time"
-      and NEW.teacher_name is not distinct from OLD.teacher_name then
-      return NEW;
+    if TG_OP = 'UPDATE' then
+      if NEW.status = OLD.status and NEW.date = OLD.date
+        and NEW."time" = OLD."time"
+        and NEW.teacher_name is not distinct from OLD.teacher_name then
+        return NEW;
+      end if;
     end if;
 
     mins := case NEW."time"
@@ -139,36 +141,77 @@ begin
     if NEW.date < current_ph::date then
       raise exception using errcode='P0001',message='SLOT_PASSED';
     end if;
-    if exists (
-      select 1 from public.appointments a
-      where a.department=NEW.department and a.date=NEW.date
-        and (NEW."time" is null or a."time"=NEW."time")
-        and a.status in ('Approved','Rescheduled')
-        and (TG_TABLE_NAME='blocked_slots' or
-          a.teacher_name is null or a.teacher_name=NEW.teacher_name)
-    ) then
-      raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+    if TG_TABLE_NAME='blocked_slots' then
+      if exists (
+        select 1 from public.appointments a
+        where a.department=NEW.department and a.date=NEW.date
+          and (NEW."time" is null or a."time"=NEW."time")
+          and a.status in ('Approved','Rescheduled')
+      ) then
+        raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+      end if;
+    else
+      if exists (
+        select 1 from public.appointments a
+        where a.department=NEW.department and a.date=NEW.date
+          and (NEW."time" is null or a."time"=NEW."time")
+          and a.status in ('Approved','Rescheduled')
+          and (a.teacher_name is null or a.teacher_name=NEW.teacher_name)
+      ) then
+        raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+      end if;
     end if;
     return NEW;
   end if;
 
   if TG_TABLE_NAME = 'availability' or TG_TABLE_NAME = 'teacher_availability' then
-    if TG_OP='DELETE' or (TG_OP='UPDATE' and
-      (OLD.department,OLD.weekday,OLD."time") is distinct from
-      (NEW.department,NEW.weekday,NEW."time"))
-      or (TG_OP='UPDATE' and TG_TABLE_NAME='teacher_availability' and
-      OLD.teacher_name is distinct from NEW.teacher_name) then
-      if exists (
-        select 1 from public.appointments a
-        where a.department=OLD.department and a.status in ('Approved','Rescheduled')
-          and a.date >= current_ph::date and a."time"=OLD."time"
-          and extract(isodow from a.date)=OLD.weekday
-          and (TG_TABLE_NAME='availability' or a.teacher_name=OLD.teacher_name)
-      ) then
-        raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+    if TG_OP = 'DELETE' then
+      if TG_TABLE_NAME='availability' then
+        if exists (
+          select 1 from public.appointments a
+          where a.department=OLD.department and a.status in ('Approved','Rescheduled')
+            and a.date >= current_ph::date and a."time"=OLD."time"
+            and extract(isodow from a.date)=OLD.weekday
+        ) then
+          raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+        end if;
+      else
+        if exists (
+          select 1 from public.appointments a
+          where a.department=OLD.department and a.teacher_name=OLD.teacher_name
+            and a.status in ('Approved','Rescheduled')
+            and a.date >= current_ph::date and a."time"=OLD."time"
+            and extract(isodow from a.date)=OLD.weekday
+        ) then
+          raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+        end if;
+      end if;
+      return OLD;
+    end if;
+    if TG_OP = 'UPDATE' then
+      if TG_TABLE_NAME='availability' then
+        if (OLD.department,OLD.weekday,OLD."time") is distinct from
+          (NEW.department,NEW.weekday,NEW."time") and exists (
+          select 1 from public.appointments a
+          where a.department=OLD.department and a.status in ('Approved','Rescheduled')
+            and a.date >= current_ph::date and a."time"=OLD."time"
+            and extract(isodow from a.date)=OLD.weekday
+        ) then
+          raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+        end if;
+      else
+        if (OLD.department,OLD.teacher_name,OLD.weekday,OLD."time") is distinct from
+          (NEW.department,NEW.teacher_name,NEW.weekday,NEW."time") and exists (
+          select 1 from public.appointments a
+          where a.department=OLD.department and a.teacher_name=OLD.teacher_name
+            and a.status in ('Approved','Rescheduled')
+            and a.date >= current_ph::date and a."time"=OLD."time"
+            and extract(isodow from a.date)=OLD.weekday
+        ) then
+          raise exception using errcode='P0001',message='CONFIRMED_APPOINTMENTS_EXIST';
+        end if;
       end if;
     end if;
-    if TG_OP='DELETE' then return OLD; end if;
     return NEW;
   end if;
 
