@@ -21,7 +21,7 @@ export const INTRO: Record<Tab, string> = {
   Availability: 'Set the times each office accepts appointments, Monday to Friday.',
   Reports: 'Appointment totals by office and decision.',
   Offices: 'Manage the offices that accept appointment requests.',
-  'Email log': 'Check whether appointment emails were accepted, skipped or failed.',
+  'Email log': 'Check delivery attempts for appointment notifications and account activation emails.',
   Users: 'Assign account roles, choose department approvers and manage visitor access.',
   'Access requests': 'Review student, faculty and visitor identities before granting accounts.',
 }
