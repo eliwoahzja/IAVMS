@@ -34,6 +34,7 @@ export async function book(input: { department: string; teacher_name?: string | 
   const { data, error } = await db.from('appointments')
     .insert({ requester_id: p.id, requester_name: p.full_name, requester_email: p.email, requester_type: p.role, department, teacher_name: department === IT_DEPARTMENT ? teacher_name : null, date, time, purpose })
     .select().single()
+  if (error?.code === '23505') return { error: 'You already have an open request for this office, date and time.' }
   if (error || !data) return { error: 'Your appointment request was not saved. Please try again.' }
   await notify(data, 'pending review')
   await notifyOffice(data)
@@ -57,6 +58,9 @@ export async function decide(id: number, action: 'approve' | 'reject' | 'resched
   let event: string
   if (action === 'approve') {
     if (a.date < today()) return { error: 'That date has already passed.' }
+    const slot = (await states(a.department, a.date)).find((s) => s.time === a.time)
+    if (!slot || slot.state === 'closed') return { error: 'This slot is no longer offered or has been blocked. Reschedule the request.' }
+    if (slot.state === 'booked') return { error: 'This slot already has a confirmed appointment. Reschedule or reject the request.' }
     patch = { status: 'Approved' }; event = 'approved'
   }
   else if (action === 'reject') { patch = { status: 'Rejected' }; event = 'rejected' }
@@ -67,8 +71,10 @@ export async function decide(id: number, action: 'approve' | 'reject' | 'resched
     patch = { status: 'Rescheduled', date: to.date, time: to.time }
     event = 'rescheduled'
   }
-  const { error } = await db.from('appointments').update(patch).eq('id', id)
-  if (error) return { error: error.code === '23505' ? 'That slot already has a confirmed booking.' : 'The appointment decision was not saved. Please try again.' }
+  const { data: updated, error } = await db.from('appointments')
+    .update(patch).eq('id', id).eq('status', a.status).select('id').maybeSingle()
+  if (error) return { error: error.code === '23505' ? 'That slot already has a confirmed booking or duplicate active request.' : 'The appointment decision was not saved. Please try again.' }
+  if (!updated) return { error: 'Another action already changed this request. Refresh and review its current status.' }
   await notify({ ...a, ...patch }, event)
   revalidatePath('/')
   return {}
@@ -85,8 +91,10 @@ export async function cancel(id: number): Promise<R> {
   if (!a) return { error: 'Appointment not found. Refresh the page and try again.' }
   if (a.requester_id !== p.id && p.role !== 'admin') return { error: 'Your account does not have permission for this action.' }
   if (!['Pending', 'Approved', 'Rescheduled'].includes(a.status)) return { error: 'This appointment is already closed.' }
-  const { error } = await db.from('appointments').update({ status: 'Cancelled' }).eq('id', id)
+  const { data: updated, error } = await db.from('appointments')
+    .update({ status: 'Cancelled' }).eq('id', id).eq('status', a.status).select('id').maybeSingle()
   if (error) return { error: 'The appointment was not cancelled. Please try again.' }
+  if (!updated) return { error: 'This appointment was already changed. Refresh and check its current status.' }
   await notify(a, 'cancelled')
   revalidatePath('/')
   return {}
