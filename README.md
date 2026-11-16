@@ -17,9 +17,12 @@ and a configurable SMTP or Resend email transport.
 update public.profiles set role = 'admin' where email = 'you@spcc.ph';
 ```
 
-An existing database that predates `supabase/migrations/` needs each file in that folder run
-once, in order (`0001_gender.sql` … `0007_admin_delete_account.sql`). They are written to be repeatable;
-`0005` removes the gender column that `0001` added, because the field is not part of the study.
+For a fresh installation, run `supabase/schema.sql` and then the migrations in
+`supabase/migrations/` from `0008` through `0011`, in ascending order. For an existing
+IAVMS database, run only unapplied migrations and do not rerun the base schema.
+The `0011_teacher_scheduling_and_atomic_guards.sql` migration separates College of IT
+teacher capacity and installs the database transaction guards. The migration is already
+applied to the connected IAVMS Supabase project.
 
 ## Email notifications with SMTP or Resend
 
@@ -224,3 +227,32 @@ development server loaded `.env.local`. Confirm `EMAIL_PROVIDER=smtp`, the Maile
 SMTP configuration, and the verified `EMAIL_FROM` address. Restart Next.js after changing
 environment variables. A `localhost` link is only usable on the host device. For recipients
 on different devices, configure `APP_URL` with a reachable HTTPS deployment.
+
+## Teacher scheduling and concurrency safeguards
+
+College of IT appointments now reserve capacity per selected teacher. Two different
+teachers may have confirmed appointments at the same time, while each teacher is limited
+to one confirmed student per time slot. Older confirmed College of IT appointments without
+a teacher assignment continue to reserve their whole department slot. Other offices retain
+one confirmed appointment per department and time slot.
+
+**Office hours → College of IT → Schedule to manage** lets authorized administrators and
+the assigned department approver adjust department-wide availability or each teacher's
+weekly schedule and date-specific closures. Teacher availability initially mirrors the
+department's existing weekly hours, and must be maintained by responsible staff. Selecting
+a teacher does not integrate automatically with that teacher's external calendar.
+
+The `iavms_schedule_guard` PostgreSQL trigger serializes appointment and schedule changes
+using a transaction-scoped advisory lock per department. It rejects bookings in closed,
+past, teacher-unavailable or already-confirmed slots, and refuses to close, disable or
+deactivate resources with future confirmed appointments. Approval remains an explicit
+department decision; pending requests do not reserve capacity.
+
+Automated checks run in GitHub Actions via `.github/workflows/iavms-checks.yml`:
+TypeScript type checking and separate PostgreSQL integration tests in
+`tests/scheduling-concurrency.mjs`. The tests create a disposable PostgreSQL database
+and exercise simultaneous approvals, independent teacher bookings, legacy bookings,
+blocking, weekly-hour changes, office deactivation and cancellation.
+They use no production records or credentials.
+
+The previous Chapter 3 documentation and diagrams have not been changed.
