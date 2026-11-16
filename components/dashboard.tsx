@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { Check, LogOut, Menu, Plus, Search, X } from 'lucide-react'
 import { cancel, markVisit, signOut } from '@/app/actions'
 import { SkeletonRows, SkeletonTableRows } from '@/components/skeleton'
-import { STATUSES, TYPE_LABEL, bySchedule, code, initials, personLabel, tone } from '@/lib/constants'
+import { STATUSES, TYPE_LABEL, bySchedule, bySubmission, code, initials, personLabel, tone } from '@/lib/constants'
 import { TABS, INTRO, TAB_TITLE, type Group, type Tab } from '@/components/dashboard/config'
 import { BusyButton, ConfirmButton, Metric, ApptRow, type Run } from '@/components/dashboard/shared'
 import { ModalBox } from '@/components/dashboard/modal'
@@ -99,10 +99,11 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
   }
 
   const ordered = useMemo(() => [...appts].sort(bySchedule), [appts])
+  const submissionOrdered = useMemo(() => [...appts].sort(bySubmission), [appts])
   const count = (s: Status) => ordered.filter((a) => a.status === s).length
-  const list = useMemo(() => ordered.filter((a) => (filter === 'All' || a.status === filter) && `${a.requester_name} ${a.department} ${code(a.id)}`.toLowerCase().includes(search.toLowerCase())), [ordered, filter, search])
+  const list = useMemo(() => (staff && filter === 'Pending' ? submissionOrdered : ordered).filter((a) => (filter === 'All' || a.status === filter) && `${a.requester_name} ${a.department} ${code(a.id)}`.toLowerCase().includes(search.toLowerCase())), [ordered, submissionOrdered, staff, filter, search])
   const upcoming = ordered.filter((a) => (a.status === 'Approved' || a.status === 'Rescheduled') && a.date >= today).slice(0, 6)
-  const pending = ordered.filter((a) => a.status === 'Pending' && (group === 'admin' || a.department === profile.department)).slice(0, 5)
+  const pending = submissionOrdered.filter((a) => a.status === 'Pending' && (group === 'admin' || a.department === profile.department)).slice(0, 5)
 
   return <div className="app-shell">
     <a className="skip-link" href="#content">Skip to content</a>
@@ -140,13 +141,14 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
             <Metric label="Visitor records" value={visitors.length} tone="sand" />
           </section>
           <div className="panel panel-focus"><div className="panel-heading"><div><h2>Awaiting a decision</h2><p className="panel-sub">Requests that staff need to review</p></div><button type="button" className="secondary-button" onClick={() => { setTab('Appointments'); setFilter('Pending') }}>View all requests</button></div>
-            <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(pending.length, 2)} label="Refreshing pending requests" /> : pending.length ? pending.map((a, i) => <ApptRow key={a.id} a={a} i={i} actions={<button type="button" className="secondary-button" onClick={() => setModal({ review: a })}>Review</button>} />) : <p className="empty-copy">No pending requests need a decision.</p>}</div></div>
+            <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(pending.length, 2)} label="Refreshing pending requests" /> : pending.length ? pending.map((a, i) => <ApptRow key={a.id} a={a} i={i} showSubmitted actions={<button type="button" className="secondary-button" onClick={() => setModal({ review: a })}>Review</button>} />) : <p className="empty-copy">No pending requests need a decision.</p>}</div></div>
           <div className="panel"><div className="panel-heading"><div><h2>Upcoming appointments</h2><p className="panel-sub">Approved appointments and confirmed rescheduled times</p></div></div>
             <div className="request-list">{refreshing ? <SkeletonRows rows={Math.max(upcoming.length, 2)} label="Refreshing appointments" /> : upcoming.length ? upcoming.map((a, i) => <ApptRow key={a.id} a={a} i={i} />) : <p className="empty-copy">No upcoming approved appointments. New approvals will appear here.</p>}</div></div></>}
 
         {tab === 'Appointments' && <div className="panel"><div className="panel-heading"><div><h2>{list.length} {list.length === 1 ? 'request' : 'requests'}</h2></div>
           <div className="filters"><label className="field-label" htmlFor="f-status">Status</label><select id="f-status" className="field-input" value={filter} onChange={(e) => setFilter(e.target.value as Status | 'All')}><option>All</option>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div></div>
-          <div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(list.length, 2), 5)} label="Refreshing requests" /> : list.length ? list.map((a, i) => <ApptRow key={a.id} a={a} i={i} actions={<>
+          {staff && filter === 'Pending' && <p className="muted-note appointment-queue-help">Pending requests are listed by database submission time, earliest first. The department still decides which request to approve.</p>}
+          <div className="request-list">{refreshing ? <SkeletonRows rows={Math.min(Math.max(list.length, 2), 5)} label="Refreshing requests" /> : list.length ? list.map((a, i) => <ApptRow key={a.id} a={a} i={i} showSubmitted={staff} actions={<>
             {staff && (group === 'admin' || a.department === profile.department) && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <button className="secondary-button" onClick={() => setModal({ review: a })}>{a.status === 'Pending' ? 'Review' : 'Reschedule'}</button>}
             {(a.requester_id === profile.id || group === 'admin') && ['Pending', 'Approved', 'Rescheduled'].includes(a.status) && <ConfirmButton label="Cancel" confirmLabel="Confirm cancel" disabled={busy} onConfirm={() => run(() => cancel(a.id), 'Appointment cancelled')} />}</>} />) : <p className="empty-copy">No appointments match your search or selected status.</p>}</div></div>}
 
@@ -167,7 +169,7 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
       </div>
     </main>
 
-    {typeof modal === 'object' && modal && <ModalBox title={`Review ${code(modal.review.id)}`} onClose={() => setModal(null)}><Review a={modal.review} today={today} run={run} busy={busy} /></ModalBox>}
+    {typeof modal === 'object' && modal && <ModalBox title={`Review ${code(modal.review.id)}`} onClose={() => setModal(null)}><Review a={modal.review} today={today} run={run} busy={busy} sameSlot={appts.filter((a) => a.id !== modal.review.id && a.department === modal.review.department && a.date === modal.review.date && a.time === modal.review.time)} /></ModalBox>}
     {modal === 'book' && <ModalBox title="New appointment" onClose={() => setModal(null)}><Wizard today={today} depts={depts} own={profile.role === 'approver' ? profile.department : null} run={run} busy={busy} /></ModalBox>}
     {modal === 'visitor' && <ModalBox title="Register a visitor" onClose={() => setModal(null)}><VisitorForm profile={profile} depts={depts} appts={ordered} run={run} busy={busy} /></ModalBox>}
     {toast && <div className={`toast ${toastError ? 'toast-error' : ''}`} role={toastError ? 'alert' : 'status'}>{toastError ? <X /> : <Check />} {toast}</div>}
