@@ -33,6 +33,9 @@ begin
   if has_function_privilege('authenticated','public.claim_account_review(uuid,uuid)','EXECUTE') then
     raise exception 'CLAIM_EXPOSED_TO_AUTHENTICATED';
   end if;
+  if has_function_privilege('anon','public.my_role()','EXECUTE') or has_function_privilege('anon','public.my_dept()','EXECUTE') then
+    raise exception 'ROLE_HELPER_EXPOSED_TO_ANON';
+  end if;
 end $test$;
 
 set role authenticated;
