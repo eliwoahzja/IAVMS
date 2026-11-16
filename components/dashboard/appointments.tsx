@@ -8,7 +8,7 @@ import { BusyButton, ConfirmButton, type Run } from '@/components/dashboard/shar
 import { IT_DEPARTMENT, IT_TEACHERS, SLOTS, bySubmission, code, day, initials, submittedAt, tone } from '@/lib/constants'
 import type { Appt, SlotInfo } from '@/lib/types'
 
-function SlotPicker({ department, date, value, onPick }: { department: string; date: string; value: string; onPick: (t: string) => void }) {
+function SlotPicker({ department, date, teacherName, value, onPick }: { department: string; date: string; teacherName?: string | null; value: string; onPick: (t: string) => void }) {
   const [slots, setSlots] = useState<SlotInfo[] | null>(null)
   const [failed, setFailed] = useState(false)
   const [retry, setRetry] = useState(0)
@@ -16,7 +16,7 @@ function SlotPicker({ department, date, value, onPick }: { department: string; d
     let live = true
     setSlots(null)
     setFailed(false)
-    slotStates(department, date)
+    slotStates(department, date, teacherName)
       .then((result) => {
         if (!live) return
         setSlots(result)
@@ -28,7 +28,7 @@ function SlotPicker({ department, date, value, onPick }: { department: string; d
         setFailed(true)
       })
     return () => { live = false }
-  }, [department, date, retry])
+  }, [department, date, teacherName, retry])
   if (failed) return <div role="alert" className="muted-note">Appointment times could not be loaded. Check the server configuration and try again. <button type="button" className="secondary-button" onClick={() => setRetry((n) => n + 1)}>Retry</button></div>
   if (!slots) return <div className="slot-grid" aria-busy="true" aria-label="Loading appointment times">{SLOTS.map((t) => <span key={t} className="skeleton" />)}</div>
   const label = { open: 'Open', held: 'Request pending', booked: 'Booked', closed: 'Closed' }
@@ -53,7 +53,7 @@ export function Wizard({ today, depts, own, run, busy }: { today: string; depts:
       </div>
       {teacherName && <p className="muted-note">Selected teacher: {teacherName}</p>}
     </div> : <div className="choice-grid">{depts.filter((d) => d !== own).map((d) => <button type="button" key={d} className={`choice-card ${department === d ? 'selected' : ''}`} aria-pressed={department === d} onClick={() => { setDepartment(d); setTeacherName(''); setDate(''); setTime('') }}>{d}</button>)}</div>)}
-    {step === 2 && <><DatePicker id="appt-date" label="Date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} />{date ? <><SlotPicker department={department} date={date} value={time} onPick={setTime} /><p className="muted-note">A request is not a confirmed booking until the office approves it. Pending requests leave the slot available.</p></> : <p className="muted-note">Office hours run Monday to Friday, 9:00 AM to 5:00 PM. Available times depend on each office's schedule.</p>}</>}
+    {step === 2 && <><DatePicker id="appt-date" label="Date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} />{date ? <><SlotPicker department={department} date={date} teacherName={teacherName} value={time} onPick={setTime} /><p className="muted-note">A request is not a confirmed booking until the office approves it. Pending requests leave the slot available.</p></> : <p className="muted-note">Office hours run Monday to Friday, 9:00 AM to 5:00 PM. Available times depend on each office's schedule.</p>}</>}
     {step === 3 && <><label className="field-label" htmlFor="appt-purpose">What is the appointment for?</label><textarea id="appt-purpose" className="field-input" rows={4} value={purpose} onChange={(e) => setPurpose(e.target.value)} /></>}
     <div className="form-actions">{step > 1 && <button className="secondary-button" onClick={() => setStep(step - 1)}>Back</button>}
       {step < 3 ? <button className="primary-button" disabled={!ok} onClick={() => setStep(step + 1)}>Continue</button> : <BusyButton label="Submit request" className="primary-button" disabled={!ok || busy} onClick={() => run(() => book({ department, teacher_name: department === IT_DEPARTMENT ? teacherName : null, date, time, purpose }), 'Request submitted. Waiting for office approval.')}>Submit request</BusyButton>}</div></div>
@@ -73,7 +73,7 @@ export function Review({ a, today, run, busy, sameSlot }: { a: Appt; today: stri
       <span>Order is based on database submission timestamps. Staff review and approve requests, not automatically by network speed.</span>
       {confirmed && <span className="appointment-review-conflict">A confirmed appointment already occupies this office, date and time. Reschedule or reject this request.</span>}
     </div>}
-    {resched && <><DatePicker id="new-date" label="New date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} /><SlotPicker department={a.department} date={date} value={time} onPick={setTime} /></>}
+    {resched && <><DatePicker id="new-date" label="New date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} /><SlotPicker department={a.department} date={date} teacherName={a.teacher_name} value={time} onPick={setTime} /></>}
     <div className="form-actions">{a.status === 'Pending' && !resched && <ConfirmButton label="Reject" confirmLabel="Confirm reject" disabled={busy} onConfirm={() => run(() => decide(a.id, 'reject'), 'Request rejected')} />}
       {resched ? <BusyButton label="Confirm new time" className="primary-button" disabled={!time || busy} onClick={() => run(() => decide(a.id, 'reschedule', { date, time }), 'Request rescheduled')}>Confirm new time</BusyButton>
         : <><button className="secondary-button" onClick={() => setResched(true)}>Reschedule</button>{a.status === 'Pending' && <BusyButton label="Approve" className="primary-button" disabled={busy || confirmed} onClick={() => run(() => decide(a.id, 'approve'), 'Request approved')}><Check /> Approve</BusyButton>}</>}</div></>
