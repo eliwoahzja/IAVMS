@@ -5,7 +5,7 @@ import { Check } from 'lucide-react'
 import { book, decide, slotStates } from '@/app/actions'
 import { DatePicker } from '@/components/date-picker'
 import { BusyButton, ConfirmButton, type Run } from '@/components/dashboard/shared'
-import { IT_DEPARTMENT, IT_TEACHERS, SLOTS, code, day, initials, tone } from '@/lib/constants'
+import { IT_DEPARTMENT, IT_TEACHERS, SLOTS, bySubmission, code, day, initials, submittedAt, tone } from '@/lib/constants'
 import type { Appt, SlotInfo } from '@/lib/types'
 
 function SlotPicker({ department, date, value, onPick }: { department: string; date: string; value: string; onPick: (t: string) => void }) {
@@ -59,14 +59,22 @@ export function Wizard({ today, depts, own, run, busy }: { today: string; depts:
       {step < 3 ? <button className="primary-button" disabled={!ok} onClick={() => setStep(step + 1)}>Continue</button> : <BusyButton label="Submit request" className="primary-button" disabled={!ok || busy} onClick={() => run(() => book({ department, teacher_name: department === IT_DEPARTMENT ? teacherName : null, date, time, purpose }), 'Request submitted. Waiting for office approval.')}>Submit request</BusyButton>}</div></div>
 }
 
-export function Review({ a, today, run, busy }: { a: Appt; today: string; run: Run; busy: boolean }) {
+export function Review({ a, today, run, busy, sameSlot }: { a: Appt; today: string; run: Run; busy: boolean; sameSlot: Appt[] }) {
   const [resched, setResched] = useState(a.status !== 'Pending')
   const [date, setDate] = useState(a.date)
   const [time, setTime] = useState('')
+  const queue = [...sameSlot.filter((p) => p.status === 'Pending'), ...(a.status === 'Pending' ? [a] : [])].sort(bySubmission)
+  const queuePosition = queue.findIndex((p) => p.id === a.id) + 1
+  const confirmed = sameSlot.some((p) => p.status === 'Approved' || p.status === 'Rescheduled')
   return <>
-    <div className="review-summary"><span className={`avatar avatar-${tone(a.id)}`}>{initials(a.requester_name)}</span><div><strong>{a.requester_name}</strong><span>{a.department} · {day(a.date)} at {a.time}</span>{a.teacher_name && <span>Teacher: {a.teacher_name}</span>}<span>{a.purpose}</span></div></div>
+    <div className="review-summary"><span className={`avatar avatar-${tone(a.id)}`}>{initials(a.requester_name)}</span><div><strong>{a.requester_name}</strong><span>{a.department} · {day(a.date)} at {a.time}</span>{a.teacher_name && <span>Teacher: {a.teacher_name}</span>}<span>{a.purpose}</span><span>Submitted: {submittedAt(a.created_at)}</span></div></div>
+    {a.status === 'Pending' && <div className="appointment-review-note" role="status">
+      <strong>{queuePosition > 0 ? `Request ${queuePosition} of ${queue.length} for this office slot` : 'Pending request'}</strong>
+      <span>Order is based on database submission timestamps. Staff review and approve requests, not automatically by network speed.</span>
+      {confirmed && <span className="appointment-review-conflict">A confirmed appointment already occupies this office, date and time. Reschedule or reject this request.</span>}
+    </div>}
     {resched && <><DatePicker id="new-date" label="New date" value={date} min={today} onChange={(next) => { setDate(next); setTime('') }} /><SlotPicker department={a.department} date={date} value={time} onPick={setTime} /></>}
     <div className="form-actions">{a.status === 'Pending' && !resched && <ConfirmButton label="Reject" confirmLabel="Confirm reject" disabled={busy} onConfirm={() => run(() => decide(a.id, 'reject'), 'Request rejected')} />}
       {resched ? <BusyButton label="Confirm new time" className="primary-button" disabled={!time || busy} onClick={() => run(() => decide(a.id, 'reschedule', { date, time }), 'Request rescheduled')}>Confirm new time</BusyButton>
-        : <><button className="secondary-button" onClick={() => setResched(true)}>Reschedule</button>{a.status === 'Pending' && <BusyButton label="Approve" className="primary-button" disabled={busy} onClick={() => run(() => decide(a.id, 'approve'), 'Request approved')}><Check /> Approve</BusyButton>}</>}</div></>
+        : <><button className="secondary-button" onClick={() => setResched(true)}>Reschedule</button>{a.status === 'Pending' && <BusyButton label="Approve" className="primary-button" disabled={busy || confirmed} onClick={() => run(() => decide(a.id, 'approve'), 'Request approved')}><Check /> Approve</BusyButton>}</>}</div></>
 }
