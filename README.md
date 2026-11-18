@@ -207,6 +207,35 @@ System font, rem-based type, sticky top bar. On phones, dialogs are bottom sheet
 handle to dismiss, and the release velocity decides. Reduced motion, reduced transparency and
 higher contrast preferences are handled.
 
+### SMTP certificate-trust failures
+
+If the Email delivery log reports `self-signed certificate in certificate chain`,
+the connection failed TLS validation before Maileroo accepted a message. IAVMS
+now combines Node.js trusted CAs with the trusted operating-system CAs when
+the Node runtime supports it. TLS certificate verification stays enabled.
+
+- Confirm `SMTP_HOST=smtp.maileroo.com`, `SMTP_PORT=587`, and `SMTP_SECURE=false`
+  for Maileroo STARTTLS, or use `465` with `SMTP_SECURE=true`.
+- Use a supported Node.js LTS release with a current certificate trust store.
+  On Windows, update the operating system's root certificates. On Termux,
+  update the `ca-certificates` package.
+- If an antivirus, school proxy, or network filter intercepts TLS, ask the
+  network administrator to fix its certificate chain. A mobile hotspot is
+  useful for determining whether the network is the cause.
+- When the Node runtime supports it, enable system certificate trust before
+  starting Next.js. PowerShell: `$env:NODE_USE_SYSTEM_CA="1"; npm run dev`.
+  Termux: `NODE_USE_SYSTEM_CA=1 WATCHPACK_POLLING=1000 npm run dev`.
+- For a privately administered CA, `NODE_EXTRA_CA_CERTS` accepts the path
+  to an approved PEM certificate bundle when set before Node.js starts.
+- Never set `NODE_TLS_REJECT_UNAUTHORIZED=0` or disable SMTP certificate
+  verification. Restart the server after environment changes.
+
+The Email delivery dashboard distinguishes provider acceptance from actual
+inbox delivery. If activation is approved but email fails, fix transport and
+choose **Resend activation email** from the approved access request. Set
+`APP_URL` to a reachable HTTPS origin before sending links to another device.
+Rotate any SMTP passwords or server keys previously exposed in screenshots.
+
 ## Troubleshooting outbound email
 
 Open **Email delivery** in the administrator dashboard and choose **Send test to my email**
