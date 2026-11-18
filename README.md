@@ -243,6 +243,13 @@ to submit a diagnostic message to the signed-in administrator's own email addres
 requires an authorized administrator, limits accepted diagnostic messages to one per minute,
 and records the attempt in `email_log` without exposing SMTP credentials.
 
+Activation links open a **Confirm your account link** page before consuming
+their single-use Supabase token. The student must press **Continue to set password**
+to verify the token. This prevents automated GET link previews and mail security
+scanners from consuming an activation token before the recipient clicks it.
+The confirmation page does not authenticate users until the explicit form
+submission. Email recipients still need a reachable `APP_URL` and an unexpired link.
+
 If an account has been approved but the user did not receive their setup link, open
 **Access requests**, locate the approved account, and choose **Resend activation email**.
 The action sends a fresh time-limited password-setup link to the already approved and linked
