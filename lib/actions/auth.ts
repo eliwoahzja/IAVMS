@@ -26,7 +26,7 @@ export async function signIn(fd: FormData) {
 }
 
 export async function requestActivation(fd: FormData) {
-  if (String(fd.get('website') ?? '').trim()) back('/login', 'msg', 'Your activation request was received. Check your email after administrator review.')
+  if (String(fd.get('form_verification_empty') ?? '').trim()) back('/activate', 'error', 'Your request was not saved. Disable browser form autofill and try again.')
   if (fd.get('consent') !== 'on') back('/activate', 'error', 'Accept the privacy notice to request access.')
   const type = String(fd.get('type') ?? '')
   if (!['student','faculty','visitor'].includes(type)) back('/activate', 'error', 'Choose a valid account type.')
