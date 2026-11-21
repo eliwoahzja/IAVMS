@@ -9,6 +9,6 @@ export type TeacherAvail = { department: string; teacher_name: string; weekday: 
 export type TeacherBlock = { id: number; department: string; teacher_name: string; date: string; time: string | null; reason: string }
 export type MailRow = { id: number; appointment_id: number | null; to_email: string; event: string; status: string; detail: string | null; created_at: string }
 export type SlotInfo = { time: string; state: 'open' | 'held' | 'booked' | 'closed' }
-export type R = { error?: string }
+export type R = { error?: string; warning?: string }
 export type Dept = { name: string; active: boolean }
 export type AccountRequest = { id: string; email: string; full_name: string; requested_role: 'student' | 'faculty' | 'visitor'; school_id: string | null; status: 'pending' | 'processing' | 'approved' | 'rejected'; created_at: string; reviewed_at?: string | null }
