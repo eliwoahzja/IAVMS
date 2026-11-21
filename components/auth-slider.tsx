@@ -60,7 +60,6 @@ export function AuthSlider({ initialMode, error, msg }: {
           {up && notice.error && <p className="auth-note auth-error" role="alert">{notice.error}</p>}
           {up && notice.msg && <p className="auth-note" role="status">{notice.msg}</p>}
           <form action={requestActivation}>
-            <input className="auth-honeypot" type="text" name="form_verification_empty" tabIndex={-1} autoComplete="off" aria-hidden="true" />
             <fieldset className="field-set">
               <legend className="field-legend">Identity details</legend>
               <div className="field-pair">
