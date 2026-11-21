@@ -90,11 +90,12 @@ export async function reviewAccess(id: string, action: 'approve' | 'reject'): Pr
     const delivery = await send(req.email, subject, message, html)
     await logAccessDelivery(req.email, 'account activation', delivery)
     if (delivery.status !== 'sent') {
-      return { error: 'Account approved, but the activation email was not accepted. Use Resend activation email under Approved accounts after checking your email provider.' }
+      return { warning: 'Account approved. Activation email not sent (' + delivery.status + '): ' + delivery.detail.slice(0, 140) + '. Use Resend activation email under Approved accounts. No new account request is needed.' }
     }
     return {}
   } catch (err) {
     console.error('Account review failed:', err instanceof Error ? err.message : 'Unknown error')
+    if (completed) return { warning: 'Account was approved, but the activation email step failed. Use Resend activation email under Approved accounts. No new request is needed.' }
     return { error: err instanceof Error ? err.message : 'Account approval failed. Retry this request.' }
   } finally {
     if (!completed) {
@@ -143,7 +144,7 @@ export async function resendActivation(id: string): Promise<R> {
   const html = '<div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:24px"><h2 style="color:#07095f">SPCC Pass</h2><p>Hello ' + safe(req.full_name) + ',</p><p>Your administrator has sent a new password setup link for your approved account.</p><p><a href="' + safe(link) + '" style="display:inline-block;padding:12px 20px;background:#07095f;color:#fff;border-radius:8px;text-decoration:none">Set your password</a></p><p>This link is private and expires automatically. If you did not request this, contact your administrator.</p></div>'
   const delivery = await send(req.email, subject, body, html)
   await logAccessDelivery(req.email, 'activation resend', delivery)
-  if (delivery.status !== 'sent') return { error: 'Email provider did not accept the message (' + delivery.status + '): ' + delivery.detail.slice(0, 160) }
   revalidatePath('/')
+  if (delivery.status !== 'sent') return { error: 'Email not sent (' + delivery.status + '): ' + delivery.detail.slice(0, 160) + '. The account stays approved. Fix the email connection and retry here without submitting a new request.' }
   return {}
 }
