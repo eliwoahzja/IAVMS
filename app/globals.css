@@ -768,7 +768,6 @@ h1, h2 { text-wrap: balance; }
 .auth-activate-button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .auth-field-hint { margin: 9px 0 2px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.45; }
 .auth-footnote { margin-top: 14px; color: var(--muted-foreground); font-size: .75rem; line-height: 1.55; }
-.auth-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; opacity: 0; }
 .auth-reset-card { box-sizing: border-box; width: min(480px, 100%); margin: 0 auto; padding: 32px; border-radius: 24px; background: #fff; box-shadow: 0 20px 60px rgba(3,4,40,.3); }
 .auth-reset-card h1 { margin: 0 0 12px; color: var(--ink); font-size: 1.5rem; }
 .auth-reset-card p { font-size: .875rem; line-height: 1.6; color: var(--muted-foreground); }
