@@ -50,16 +50,18 @@ export async function requestActivation(fd: FormData) {
     school_id: type === 'visitor' ? null : schoolId,
   })
   if (error?.code === '23505') {
-    const { error: retryError } = await admin().from('account_requests').update({
+    const { data: retried, error: retryError } = await admin().from('account_requests').update({
       full_name, requested_role: type, school_id: type === 'visitor' ? null : schoolId,
       status: 'pending', reviewed_by: null, reviewed_at: null,
       created_at: new Date().toISOString(),
     }).eq('email', email).eq('status', 'rejected')
       .lt('created_at', new Date(Date.now() - 60000).toISOString())
+      .select('id').maybeSingle()
     if (retryError) {
       console.error('Activation request update failed:', retryError.code)
       back('/activate', 'error', 'Your request could not be updated. Contact the school administrator.')
     }
+    if (!retried) back('/activate', 'error', 'No new request was saved. If you have already requested access, contact the school administrator.')
   } else if (error) {
     console.error('Account request failed:', error.code)
     back('/activate', 'error', 'Your request could not be submitted. Try again later.')
