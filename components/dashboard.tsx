@@ -88,10 +88,10 @@ export function Dashboard({ profile, appts, visitors, avail, blocks, users, emai
     start(async () => {
       try {
         const r = await fn()
-        setToast(r.error ?? ok)
-        setToastError(!!r.error)
+        setToast(r.error ?? r.warning ?? ok)
+        setToastError(!!r.error || !!r.warning)
         if (!r.error) setModal(null)
-        window.setTimeout(() => setToast(''), 3500)
+        window.setTimeout(() => setToast(''), r.warning ? 8000 : 3500)
       } finally {
         setActing(false)
       }
